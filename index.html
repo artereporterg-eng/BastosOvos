@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -6,25 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AvícolaTech AI - Soluções para Avicultura</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
 </head>
 <body class="bg-slate-50 text-slate-900">
-    <div id="root"></div>
-<script type="module" src="/index.tsx"></script>
+
+    <div id="app" class="max-w-2xl mx-auto p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-orange-600">AvícolaTech AI</h1>
+            <p class="text-slate-600">Assistente Inteligente para Avicultura</p>
+        </header>
+
+        <div id="chat-container" class="bg-white rounded-lg shadow-md p-6 mb-4 h-96 overflow-y-auto border border-slate-200">
+            <p class="text-slate-400 text-center">Inicie uma conversa abaixo...</p>
+        </div>
+
+        <div class="flex gap-2">
+            <input type="text" id="user-input" placeholder="Pergunte sobre sua criação..." class="flex-1 p-2 border rounded-md outline-orange-500">
+            <button onclick="sendMessage()" class="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700">Enviar</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+        // CONFIGURAÇÃO: Coloque sua chave aqui entre as aspas
+        const API_KEY = "AIzaSyAeYuB-6QF-nY_VZyxqvdF0PoFt1rdt6cY"; 
+        const genAI = new GoogleGenerativeAI(API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        window.sendMessage = async function() {
+            const input = document.getElementById('user-input');
+            const container = document.getElementById('chat-container');
+            const message = input.value;
+
+            if (!message) return;
+
+            // Adiciona mensagem do usuário na tela
+            container.innerHTML += `<p class="mb-2"><strong>Você:</strong> ${message}</p>`;
+            input.value = '';
+
+            try {
+                const result = await model.generateContent(message);
+                const response = await result.response;
+                const text = response.text();
+                
+                // Adiciona resposta da IA na tela
+                container.innerHTML += `<p class="mb-4 text-blue-700"><strong>IA:</strong> ${text}</p>`;
+                container.scrollTop = container.scrollHeight;
+            } catch (error) {
+                container.innerHTML += `<p class="text-red-500">Erro: Verifique sua chave de API ou conexão.</p>`;
+                console.error(error);
+            }
+        }
+    </script>
 </body>
 </html>
+
