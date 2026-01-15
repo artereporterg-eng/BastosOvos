@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -5,62 +6,369 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AvícolaTech AI - Soluções para Avicultura</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
     </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.36.0"
+  }
+}
+</script>
 </head>
 <body class="bg-slate-50 text-slate-900">
 
-    <div id="app" class="max-w-2xl mx-auto p-8">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-orange-600">AvícolaTech AI</h1>
-            <p class="text-slate-600">Assistente Inteligente para Avicultura</p>
-        </header>
-
-        <div id="chat-container" class="bg-white rounded-lg shadow-md p-6 mb-4 h-96 overflow-y-auto border border-slate-200">
-            <p class="text-slate-400 text-center">Inicie uma conversa abaixo...</p>
-        </div>
-
-        <div class="flex gap-2">
-            <input type="text" id="user-input" placeholder="Pergunte sobre sua criação..." class="flex-1 p-2 border rounded-md outline-orange-500">
-            <button onclick="sendMessage()" class="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700">Enviar</button>
-        </div>
+    <div id="root">
+        <!-- A aplicação será renderizada aqui via JavaScript -->
     </div>
 
     <script type="module">
-        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+        // --- Dados Iniciais ---
+        const initialProducts = [
+            { id: 1, name: "Incubadora Digital Automática", description: "Capacidade para 54 ovos com controle de umidade e viragem automática.", price: 850.00, category: "Incubação", image: "https://images.unsplash.com/photo-1594488358434-738980327f1c?q=80&w=400&h=400&fit=crop", rating: 4.9 },
+            { id: 2, name: "Ração Postura Premium 20kg", description: "Balanceada com cálcio e proteínas para máxima produtividade de ovos.", price: 115.90, category: "Rações", image: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?q=80&w=400&h=400&fit=crop", rating: 4.8 },
+            { id: 3, name: "Bebedouro Automático Nipple", description: "Kit com 10 unidades. Evita desperdício e mantém a água sempre limpa.", price: 89.00, category: "Equipamentos", image: "https://images.unsplash.com/photo-1589923188900-85dae523342b?q=80&w=400&h=400&fit=crop", rating: 4.7 },
+            { id: 4, name: "Suplemento Vitamínico Fortalecedor", description: "Complexo A, D3 e E para crescimento saudável de pintinhos.", price: 45.50, category: "Saúde", image: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?q=80&w=400&h=400&fit=crop", rating: 4.6 },
+            { id: 5, name: "Comedouro Tubular 15kg", description: "Chapa galvanizada anti-ferrugem com regulagem de altura.", price: 129.00, category: "Equipamentos", image: "https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?q=80&w=400&h=400&fit=crop", rating: 4.5 },
+            { id: 6, name: "Lâmpada de Aquecimento Cerâmica", description: "100W de potência. Emite calor sem luz, ideal para o descanso das aves.", price: 64.90, category: "Acessórios", image: "https://images.unsplash.com/photo-1520699697851-3dc68aa3a474?q=80&w=400&h=400&fit=crop", rating: 4.8 }
+        ];
 
-        // CONFIGURAÇÃO: Coloque sua chave aqui entre as aspas
-        const API_KEY = "AIzaSyAPOpRow3aseKI_cc8c_GA2EIyz0HOyKmE"; 
-        const genAI = new GoogleGenerativeAI(API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // --- Estado Global ---
+        const state = {
+            products: [...initialProducts],
+            cart: [],
+            categories: ['Todos', 'Rações', 'Equipamentos', 'Incubação', 'Saúde', 'Acessórios'],
+            selectedCategory: 'Todos',
+            searchQuery: '',
+            view: 'store',
+            isLoggedIn: false,
+            isCartOpen: false,
+            isLoginModalOpen: false
+        };
 
-        window.sendMessage = async function() {
-            const input = document.getElementById('user-input');
-            const container = document.getElementById('chat-container');
-            const message = input.value;
+        // --- Motor de Renderização ---
+        function render() {
+            const root = document.getElementById('root');
+            if (!root) return;
 
-            if (!message) return;
+            root.innerHTML = `
+                ${renderHeader()}
+                <main class="max-w-7xl mx-auto px-4 py-8">
+                    ${state.view === 'store' ? renderStore() : renderAdmin()}
+                </main>
+                ${renderFooter()}
+                ${renderCartDrawer()}
+                ${renderLoginModal()}
+                <div id="toast-container" class="fixed bottom-24 right-6 z-[100] space-y-2"></div>
+            `;
+            attachEvents();
+        }
 
-            // Adiciona mensagem do usuário na tela
-            container.innerHTML += `<p class="mb-2"><strong>Você:</strong> ${message}</p>`;
-            input.value = '';
+        function renderHeader() {
+            const cartCount = state.cart.reduce((acc, item) => acc + item.quantity, 0);
+            return `
+            <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-amber-100">
+                <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                    <div class="flex items-center gap-2 cursor-pointer" onclick="window.appActions.changeView('store')">
+                        <div class="w-10 h-10 bg-amber-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                            <i class="fa-solid fa-egg text-xl"></i>
+                        </div>
+                        <h1 class="text-xl font-bold tracking-tight text-slate-900 hidden sm:block">
+                            AvícolaTech<span class="text-amber-600">AI</span>
+                        </h1>
+                    </div>
+                    <div class="flex-1 max-w-md mx-8 hidden md:block">
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                            <input type="text" id="search-input" value="${state.searchQuery}" placeholder="Buscar rações, chocadeiras..." class="w-full bg-slate-100 border-none rounded-full py-2 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-amber-500">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <button onclick="window.appActions.handleAdminToggle()" class="px-4 py-2 rounded-xl text-sm font-bold transition-all ${state.view === 'admin' ? 'bg-slate-800 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}">
+                            <i class="fa-solid ${state.view === 'admin' ? 'fa-shop' : 'fa-gear'} mr-2"></i>
+                            <span class="hidden sm:inline">${state.view === 'admin' ? 'Ver Loja' : 'Painel Admin'}</span>
+                        </button>
+                        <button onclick="window.appActions.toggleCart()" class="relative p-2 text-slate-500 hover:text-amber-600 transition-all active:scale-95">
+                            <i class="fa-solid fa-basket-shopping text-xl"></i>
+                            ${cartCount > 0 ? `<span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full ring-2 ring-white">${cartCount}</span>` : ''}
+                        </button>
+                    </div>
+                </div>
+            </header>`;
+        }
 
-            try {
-                const result = await model.generateContent(message);
-                const response = await result.response;
-                const text = response.text();
-                
-                // Adiciona resposta da IA na tela
-                container.innerHTML += `<p class="mb-4 text-blue-700"><strong>IA:</strong> ${text}</p>`;
-                container.scrollTop = container.scrollHeight;
-            } catch (error) {
-                container.innerHTML += `<p class="text-red-500">Erro: Verifique sua chave de API ou conexão.</p>`;
-                console.error(error);
+        function renderStore() {
+            const filtered = state.products.filter(p => {
+                const matchesCat = state.selectedCategory === 'Todos' || p.category === state.selectedCategory;
+                const matchesSearch = p.name.toLowerCase().includes(state.searchQuery.toLowerCase()) || 
+                                     p.description.toLowerCase().includes(state.searchQuery.toLowerCase());
+                return matchesCat && matchesSearch;
+            });
+
+            return `
+            <section class="mb-12 relative rounded-[2rem] overflow-hidden bg-emerald-900 text-white p-8 md:p-16">
+                <div class="relative z-10 max-w-xl">
+                    <span class="bg-amber-500 text-amber-950 px-3 py-1 rounded-full text-xs font-bold uppercase mb-4 inline-block">Tecnologia no Campo</span>
+                    <h2 class="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">Sua produção avícola mais inteligente.</h2>
+                    <p class="text-emerald-100 text-lg mb-8">Nutrição de precisão e equipamentos de ponta para sua criação.</p>
+                    <button onclick="document.getElementById('catalog').scrollIntoView({behavior: 'smooth'})" class="bg-amber-500 text-amber-950 px-8 py-3 rounded-full font-bold hover:bg-amber-400 shadow-xl transition-all active:scale-95">Ver Catálogo</button>
+                </div>
+                <img src="https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?q=80&w=2070&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-20" alt="Farm">
+            </section>
+            
+            <div id="catalog" class="mb-8 flex gap-2 overflow-x-auto scrollbar-hide py-2">
+                ${state.categories.map(cat => `
+                    <button onclick="window.appActions.setCategory('${cat}')" class="px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap border transition-all ${state.selectedCategory === cat ? 'bg-amber-600 text-white border-amber-600 shadow-lg' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}">
+                        ${cat}
+                    </button>
+                `).join('')}
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                ${filtered.map(p => `
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden group hover:shadow-md transition-all flex flex-col">
+                        <div class="aspect-square bg-slate-100 overflow-hidden relative">
+                            <img src="${p.image}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="${p.name}">
+                            <div class="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded text-xs font-bold shadow-sm">★ ${p.rating}</div>
+                        </div>
+                        <div class="p-5 flex-1 flex flex-col">
+                            <span class="text-[10px] font-bold text-amber-600 uppercase mb-1 block tracking-wider">${p.category}</span>
+                            <h3 class="font-bold text-slate-800 line-clamp-1 mb-1">${p.name}</h3>
+                            <p class="text-slate-500 text-xs line-clamp-2 h-8 mb-4">${p.description}</p>
+                            <div class="mt-auto flex items-center justify-between pt-2">
+                                <span class="text-lg font-bold text-slate-900">R$ ${p.price.toFixed(2)}</span>
+                                <button onclick="window.appActions.addToCart(${p.id})" class="bg-amber-600 text-white p-2.5 rounded-xl hover:bg-amber-700 active:scale-95 shadow-lg shadow-amber-100 transition-all">
+                                    <i class="fa-solid fa-cart-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+                ${filtered.length === 0 ? '<div class="col-span-full py-20 text-center text-slate-400">Nenhum produto encontrado.</div>' : ''}
+            </div>`;
+        }
+
+        function renderAdmin() {
+            return `
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in">
+                <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h2 class="text-xl font-bold text-slate-800">Painel de Controle</h2>
+                    <button onclick="window.appActions.onLogout()" class="text-slate-400 hover:text-red-500 text-sm font-medium transition-colors">
+                        <i class="fa-solid fa-right-from-bracket mr-2"></i>Sair
+                    </button>
+                </div>
+                <div class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                                <tr>
+                                    <th class="px-6 py-4">Produto</th>
+                                    <th class="px-6 py-4">Categoria</th>
+                                    <th class="px-6 py-4">Preço</th>
+                                    <th class="px-6 py-4 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${state.products.map(p => `
+                                    <tr>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center gap-3">
+                                                <img src="${p.image}" class="w-8 h-8 rounded object-cover shadow-sm">
+                                                <span class="font-medium text-slate-800">${p.name}</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-slate-500">${p.category}</td>
+                                        <td class="px-6 py-4 font-bold">R$ ${p.price.toFixed(2)}</td>
+                                        <td class="px-6 py-4 text-right">
+                                            <button onclick="window.appActions.deleteProduct(${p.id})" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderCartDrawer() {
+            const total = state.cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+            return `
+            <div id="cart-drawer-overlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[40] transition-opacity duration-300 ${state.isCartOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}" onclick="window.appActions.toggleCart()"></div>
+            <div id="cart-drawer" class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-[50] transition-transform duration-300 transform ${state.isCartOpen ? 'translate-x-0' : 'translate-x-full'} flex flex-col">
+                <div class="p-6 border-b flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-shopping-basket text-amber-600"></i>
+                        Seu Carrinho
+                    </h2>
+                    <button onclick="window.appActions.toggleCart()" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                        <i class="fa-solid fa-xmark text-xl text-slate-400"></i>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-6 space-y-4">
+                    ${state.cart.length === 0 ? '<div class="text-center py-20 text-slate-400">Seu carrinho está vazio.</div>' : 
+                        state.cart.map(item => `
+                            <div class="flex gap-4 group">
+                                <img src="${item.image}" class="w-16 h-16 rounded-lg object-cover bg-slate-100">
+                                <div class="flex-1">
+                                    <h4 class="font-bold text-sm truncate text-slate-800">${item.name}</h4>
+                                    <div class="flex items-center justify-between mt-2">
+                                        <div class="flex items-center border border-slate-200 rounded-lg text-xs overflow-hidden">
+                                            <button onclick="window.appActions.updateQty(${item.id}, -1)" class="px-2 py-1 hover:bg-slate-100 transition-colors">-</button>
+                                            <span class="px-3 font-bold text-slate-700">${item.quantity}</span>
+                                            <button onclick="window.appActions.updateQty(${item.id}, 1)" class="px-2 py-1 hover:bg-slate-100 transition-colors">+</button>
+                                        </div>
+                                        <span class="font-bold text-sm text-slate-900">R$ ${(item.price * item.quantity).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                </div>
+                <div class="p-6 bg-slate-50 border-t">
+                    <div class="flex justify-between items-center mb-6">
+                        <span class="text-slate-500 font-medium">Total</span>
+                        <span class="text-2xl font-extrabold text-slate-900">R$ ${total.toFixed(2)}</span>
+                    </div>
+                    <button class="w-full bg-amber-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-amber-200 hover:bg-amber-700 transition-all disabled:opacity-50" ${state.cart.length === 0 ? 'disabled' : ''} onclick="window.appActions.showToast('Pedido finalizado!')">Finalizar Pedido</button>
+                </div>
+            </div>`;
+        }
+
+        function renderLoginModal() {
+            if (!state.isLoginModalOpen) return '';
+            return `
+            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+                <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl p-8 overflow-hidden animate-fade-in">
+                    <div class="text-center mb-8">
+                        <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <i class="fa-solid fa-lock text-2xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-800">Acesso Administrativo</h2>
+                    </div>
+                    <form onsubmit="window.appActions.handleLogin(event)" class="space-y-4">
+                        <input type="text" id="login-user" placeholder="admin" class="w-full border border-slate-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-amber-500" required>
+                        <input type="password" id="login-pass" placeholder="123" class="w-full border border-slate-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-amber-500" required>
+                        <div id="login-error" class="text-red-500 text-xs hidden text-center font-medium">Credenciais inválidas.</div>
+                        <button type="submit" class="w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 transition-all shadow-lg shadow-amber-100">Entrar</button>
+                        <button type="button" onclick="window.appActions.toggleLoginModal()" class="w-full text-slate-400 text-sm mt-2">Cancelar</button>
+                    </form>
+                </div>
+            </div>`;
+        }
+
+        function renderFooter() {
+            return `
+            <footer class="bg-white border-t border-slate-100 py-12 mt-12 text-center text-slate-400 text-sm">
+                <p>© 2024 AvícolaTech AI. Nutrimos o futuro da produção rural.</p>
+            </footer>`;
+        }
+
+        // --- Handlers Globais expostos ao window ---
+        window.appActions = {
+            changeView: (view) => { state.view = view; render(); },
+            setCategory: (cat) => { state.selectedCategory = cat; render(); },
+            toggleCart: () => { state.isCartOpen = !state.isCartOpen; render(); },
+            toggleLoginModal: () => { state.isLoginModalOpen = !state.isLoginModalOpen; render(); },
+
+            handleAdminToggle: () => {
+                if (state.isLoggedIn) state.view = state.view === 'store' ? 'admin' : 'store';
+                else state.isLoginModalOpen = true;
+                render();
+            },
+
+            handleLogin: (e) => {
+                e.preventDefault();
+                const u = document.getElementById('login-user').value;
+                const p = document.getElementById('login-pass').value;
+                if (u === 'admin' && p === '123') {
+                    state.isLoggedIn = true;
+                    state.isLoginModalOpen = false;
+                    state.view = 'admin';
+                    window.appActions.showToast("Logado com sucesso!");
+                } else {
+                    document.getElementById('login-error').classList.remove('hidden');
+                }
+                render();
+            },
+
+            onLogout: () => {
+                state.isLoggedIn = false;
+                state.view = 'store';
+                window.appActions.showToast("Sessão encerrada.");
+                render();
+            },
+
+            addToCart: (id) => {
+                const product = state.products.find(p => p.id === id);
+                const exists = state.cart.find(item => item.id === id);
+                if (exists) exists.quantity++;
+                else state.cart.push({ ...product, quantity: 1 });
+                window.appActions.showToast(`${product.name} adicionado!`);
+                render();
+            },
+
+            updateQty: (id, delta) => {
+                const item = state.cart.find(i => i.id === id);
+                if (item) {
+                    item.quantity = Math.max(0, item.quantity + delta);
+                    if (item.quantity === 0) {
+                        state.cart = state.cart.filter(i => i.id !== id);
+                    }
+                    render();
+                }
+            },
+
+            deleteProduct: (id) => {
+                if (confirm("Excluir produto do catálogo?")) {
+                    state.products = state.products.filter(p => p.id !== id);
+                    window.appActions.showToast("Removido.");
+                    render();
+                }
+            },
+
+            showToast: (msg) => {
+                const container = document.getElementById('toast-container');
+                if (!container) return;
+                const toast = document.createElement('div');
+                toast.className = "bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm animate-fade-in flex items-center gap-2";
+                toast.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> ${msg}`;
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+        };
+
+        function attachEvents() {
+            const search = document.getElementById('search-input');
+            if (search) {
+                search.addEventListener('input', (e) => {
+                    state.searchQuery = e.target.value;
+                    clearTimeout(window.searchTimeout);
+                    window.searchTimeout = setTimeout(() => { render(); }, 300);
+                });
             }
         }
+
+        // --- Inicialização ---
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', render);
+        } else {
+            render();
+        }
+
     </script>
 </body>
 </html>
-

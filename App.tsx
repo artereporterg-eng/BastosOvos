@@ -2,7 +2,6 @@
 import React, { useState, useMemo } from 'react';
 import ProductCard from './components/ProductCard';
 import CartDrawer from './components/CartDrawer';
-import AIAssistant from './components/AIAssistant';
 import AdminPanel from './components/AdminPanel';
 import Toast from './components/Toast';
 import LoginModal from './components/LoginModal';
@@ -240,7 +239,7 @@ const App: React.FC = () => {
                   Sua produção avícola mais inteligente.
                 </h2>
                 <p className="text-emerald-100 text-lg mb-8">
-                  De chocadeiras automáticas a nutrição de precisão. Encontre tudo o que você precisa para uma criação saudável e produtiva com o apoio de nossa IA.
+                  De chocadeiras automáticas a nutrição de precisão. Encontre tudo o que você precisa para uma criação saudável e produtiva.
                 </p>
                 <button 
                   onClick={() => {
@@ -319,7 +318,7 @@ const App: React.FC = () => {
               </h1>
             </div>
             <p className="text-slate-500 text-sm leading-relaxed">
-              Liderando a modernização do campo com soluções digitais e consultoria inteligente para produtores rurais.
+              Liderando a modernização do campo com soluções digitais e consultoria especializada para produtores rurais.
             </p>
           </div>
           <div>
@@ -367,8 +366,6 @@ const App: React.FC = () => {
         onUpdateQuantity={updateQuantity}
         onRemove={removeFromCart}
       />
-      
-      <AIAssistant products={products} />
 
       <Toast 
         message={toastMessage} 
