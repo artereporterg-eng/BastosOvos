@@ -22,10 +22,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
       </div>
       
       <div className="p-5">
-        <span className="text-xs font-medium text-indigo-600 uppercase tracking-wider mb-2 block">
+        <span className="text-xs font-medium text-amber-600 uppercase tracking-wider mb-2 block">
           {product.category}
         </span>
-        <h3 className="text-lg font-semibold text-slate-800 mb-1 leading-tight group-hover:text-indigo-600 transition-colors">
+        <h3 className="text-lg font-semibold text-slate-800 mb-1 leading-tight group-hover:text-amber-600 transition-colors">
           {product.name}
         </h3>
         <p className="text-slate-500 text-sm mb-4 line-clamp-2 h-10">
@@ -34,11 +34,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         
         <div className="flex items-center justify-between">
           <span className="text-xl font-bold text-slate-900">
-            R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            {product.price.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' }).replace('AOA', 'Kz')}
           </span>
           <button 
             onClick={() => onAddToCart(product)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95"
+            className="bg-amber-600 hover:bg-amber-700 text-white p-3 rounded-xl shadow-lg shadow-amber-200 transition-all active:scale-95"
           >
             <i className="fa-solid fa-cart-plus"></i>
           </button>

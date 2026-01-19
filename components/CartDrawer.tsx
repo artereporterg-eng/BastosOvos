@@ -8,6 +8,7 @@ interface CartDrawerProps {
   items: CartItem[];
   onUpdateQuantity: (id: number, delta: number) => void;
   onRemove: (id: number) => void;
+  onCheckout: () => void;
 }
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ 
@@ -15,9 +16,14 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
   onClose, 
   items, 
   onUpdateQuantity, 
-  onRemove 
+  onRemove,
+  onCheckout
 }) => {
   const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' }).replace('AOA', 'Kz');
+  };
 
   return (
     <>
@@ -32,8 +38,8 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
         <div className="flex flex-col h-full">
           <div className="p-6 border-b flex items-center justify-between">
             <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800">
-              <i className="fa-solid fa-shopping-bag text-indigo-600"></i>
-              Seu Carrinho
+              <i className="fa-solid fa-shopping-bag text-amber-600"></i>
+              Seu Pedido
             </h2>
             <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
               <i className="fa-solid fa-xmark text-xl"></i>
@@ -45,12 +51,6 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
               <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-4">
                 <i className="fa-solid fa-cart-shopping text-6xl opacity-20"></i>
                 <p>O seu carrinho está vazio</p>
-                <button 
-                  onClick={onClose}
-                  className="text-indigo-600 font-semibold hover:underline"
-                >
-                  Começar a comprar
-                </button>
               </div>
             ) : (
               items.map(item => (
@@ -60,14 +60,14 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-slate-800 truncate">{item.name}</h4>
-                    <p className="text-sm text-indigo-600 font-medium mb-2">
-                      R$ {item.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    <p className="text-sm text-amber-600 font-black mb-2">
+                      {formatCurrency(item.price)}
                     </p>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center border rounded-lg overflow-hidden">
                         <button 
                           onClick={() => onUpdateQuantity(item.id, -1)}
-                          className="px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors"
+                          className="px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600"
                         >
                           <i className="fa-solid fa-minus text-xs"></i>
                         </button>
@@ -76,7 +76,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
                         </span>
                         <button 
                           onClick={() => onUpdateQuantity(item.id, 1)}
-                          className="px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors"
+                          className="px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600"
                         >
                           <i className="fa-solid fa-plus text-xs"></i>
                         </button>
@@ -98,17 +98,18 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
             <div className="flex justify-between items-center mb-6">
               <span className="text-slate-500 font-medium">Subtotal</span>
               <span className="text-2xl font-bold text-slate-900">
-                R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {formatCurrency(total)}
               </span>
             </div>
             <button 
               disabled={items.length === 0}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]"
+              onClick={onCheckout}
+              className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold shadow-lg shadow-amber-200 transition-all active:scale-[0.98]"
             >
               Finalizar Pedido
             </button>
-            <p className="text-center text-xs text-slate-400 mt-4">
-              Frete grátis para todo o Brasil em compras acima de R$ 500
+            <p className="text-center text-[10px] text-slate-400 mt-4 uppercase font-black tracking-widest">
+              Tecnologia AvícolaTech ERP • Angola
             </p>
           </div>
         </div>

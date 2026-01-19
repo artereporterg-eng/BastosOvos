@@ -1,16 +1,40 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import ProductCard from './components/ProductCard';
 import CartDrawer from './components/CartDrawer';
 import AdminPanel from './components/AdminPanel';
 import Toast from './components/Toast';
 import LoginModal from './components/LoginModal';
+import AIAssistant from './components/AIAssistant';
 import { products as initialProducts } from './data/products';
-import { Product, CartItem, User } from './types';
+import { Product, CartItem, User, Employee } from './types';
 
 const App: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  // Carregamento inicial do LocalStorage se disponível para simular persistência no React
+  const [products, setProducts] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('avicolatech_products');
+    return saved ? JSON.parse(saved) : initialProducts;
+  });
+
   const [categoriesList, setCategoriesList] = useState<string[]>(['Rações', 'Equipamentos', 'Incubação', 'Saúde', 'Acessórios']);
+  const [employeeCategoriesList, setEmployeeCategoriesList] = useState<string[]>(['Produção', 'Gestão', 'Logística', 'Comercial']);
+  
+  const [employees, setEmployees] = useState<Employee[]>(() => {
+    const saved = localStorage.getItem('avicolatech_employees');
+    return saved ? JSON.parse(saved) : [
+        { id: 1, name: "Carlos Silva", role: "Técnico de Campo", category: "Produção", salary: 280000.00, admissionDate: "2023-01-15", contact: "(+244) 923 000 001" },
+        { id: 2, name: "Ana Oliveira", role: "Gerente Financeira", category: "Gestão", salary: 450000.00, admissionDate: "2022-11-20", contact: "(+244) 923 000 002" }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('avicolatech_products', JSON.stringify(products));
+  }, [products]);
+
+  useEffect(() => {
+    localStorage.setItem('avicolatech_employees', JSON.stringify(employees));
+  }, [employees]);
+
   const [users, setUsers] = useState<User[]>([
     { id: 1, username: 'admin', role: 'admin', createdAt: '01/01/2024' }
   ]);
@@ -64,6 +88,10 @@ const App: React.FC = () => {
   };
 
   const addToCart = (product: Product) => {
+    if (product.stock <= 0) {
+      showToast("Produto sem estoque!");
+      return;
+    }
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -91,8 +119,8 @@ const App: React.FC = () => {
   };
 
   const handleAddProduct = (newProduct: Omit<Product, 'id'>) => {
-    const id = Math.max(...products.map(p => p.id), 0) + 1;
-    setProducts([...products, { ...newProduct, id }]);
+    const id = Date.now();
+    setProducts([...products, { ...newProduct, id } as Product]);
     showToast("Novo produto cadastrado!");
   };
 
@@ -109,18 +137,28 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAddUser = (username: string, role: 'admin' | 'staff') => {
-    const id = Math.max(...users.map(u => u.id), 0) + 1;
-    const date = new Date().toLocaleDateString('pt-BR');
-    setUsers([...users, { id, username, role, createdAt: date }]);
-    showToast(`Usuário ${username} criado.`);
+  const handleAddEmployee = (empData: Omit<Employee, 'id'>) => {
+    const id = Date.now();
+    setEmployees([...employees, { ...empData, id }]);
+    showToast("Funcionário registrado!");
   };
 
-  const handleDeleteUser = (id: number) => {
-    if (window.confirm('Remover acesso deste usuário?')) {
-      setUsers(users.filter(u => u.id !== id));
-      showToast("Usuário removido.");
+  const handleUpdateEmployee = (emp: Employee) => {
+    setEmployees(employees.map(e => e.id === emp.id ? { ...e, ...emp } : e));
+    showToast("Cadastro atualizado!");
+  };
+
+  const handleDeleteEmployee = (id: number) => {
+    if (window.confirm('Remover funcionário do sistema?')) {
+      setEmployees(employees.filter(e => e.id !== id));
+      showToast("Funcionário removido.");
     }
+  };
+
+  const handlePaySalary = (id: number) => {
+    const date = new Date().toLocaleDateString('pt-AO');
+    setEmployees(employees.map(e => e.id === id ? { ...e, lastPaymentDate: date } : e));
+    showToast("Pagamento processado com sucesso!");
   };
 
   const handleAddCategory = (name: string) => {
@@ -140,7 +178,7 @@ const App: React.FC = () => {
   };
 
   const handleDeleteCategory = (name: string) => {
-    if (window.confirm(`Excluir categoria "${name}"?`)) {
+    if (window.confirm(`Excluir categoria de produto "${name}"?`)) {
       setCategoriesList(categoriesList.filter(c => c !== name));
       setProducts(products.map(p => p.category === name ? { ...p, category: 'Sem Categoria' } : p));
       if (selectedCategory === name) setSelectedCategory('Todos');
@@ -148,16 +186,49 @@ const App: React.FC = () => {
     }
   };
 
+  const handleAddEmployeeCategory = (name: string) => {
+    if (employeeCategoriesList.includes(name)) {
+      showToast("Categoria de funcionário já existe!");
+      return;
+    }
+    setEmployeeCategoriesList([...employeeCategoriesList, name]);
+    showToast("Categoria de RH adicionada!");
+  };
+
+  const handleUpdateEmployeeCategory = (oldName: string, newName: string) => {
+    setEmployeeCategoriesList(employeeCategoriesList.map(c => c === oldName ? newName : c));
+    setEmployees(employees.map(e => e.category === oldName ? { ...e, category: newName } : e));
+    showToast("Categoria de RH renomeada!");
+  };
+
+  const handleDeleteEmployeeCategory = (name: string) => {
+    if (window.confirm(`Excluir categoria de funcionário "${name}"?`)) {
+      setEmployeeCategoriesList(employeeCategoriesList.filter(c => c !== name));
+      setEmployees(employees.map(e => e.category === name ? { ...e, category: 'Sem Categoria' } : e));
+      showToast("Categoria de RH removida.");
+    }
+  };
+
+  const handleCheckout = () => {
+    setProducts(prev => prev.map(p => {
+      const cartItem = cart.find(ci => ci.id === p.id);
+      if (cartItem) return { ...p, stock: p.stock - cartItem.quantity };
+      return p;
+    }));
+    setCart([]);
+    setIsCartOpen(false);
+    showToast("Pedido finalizado com sucesso!");
+  };
+
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
-    <div className="min-h-screen pb-20">
-      {/* Navigation */}
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-amber-100">
+    <div className="min-h-screen pb-20 bg-slate-50">
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-amber-100 no-print">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('store')}>
             <div className="w-10 h-10 bg-amber-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-amber-200">
-              <i className="fa-solid fa-egg text-xl"></i>
+              <i className="fa-solid fa-tractor text-xl"></i>
             </div>
             <h1 className="text-xl font-bold tracking-tight text-slate-900 hidden sm:block">
               AvícolaTech<span className="text-amber-600">AI</span>
@@ -188,17 +259,15 @@ const App: React.FC = () => {
                   : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
               }`}
             >
-              <i className={`fa-solid ${view === 'admin' ? 'fa-shop' : 'fa-gear'}`}></i>
-              <span className="hidden sm:inline">{view === 'admin' ? 'Ver Loja' : 'Painel Admin'}</span>
+              <i className={`fa-solid ${view === 'admin' ? 'fa-shop' : 'fa-chart-line'}`}></i>
+              <span className="hidden sm:inline">{view === 'admin' ? 'Ver Loja' : 'Painel Gestão'}</span>
             </button>
             
-            <div className="h-8 w-[1px] bg-slate-100 mx-2 hidden sm:block"></div>
-
             <button 
               onClick={() => setIsCartOpen(true)}
               className="relative p-2 text-slate-500 hover:text-amber-600 transition-all active:scale-90"
             >
-              <i className="fa-solid fa-basket-shopping text-xl"></i>
+              <i className="fa-solid fa-cart-shopping text-xl"></i>
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full ring-2 ring-white">
                   {cartCount}
@@ -211,74 +280,65 @@ const App: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         {view === 'admin' ? (
-          <div className="animate-in fade-in zoom-in-95 duration-300">
+          <div className="animate-fade-in">
             <AdminPanel 
               products={products}
               users={users}
+              employees={employees}
               categories={categoriesList}
+              employeeCategories={employeeCategoriesList}
               onAdd={handleAddProduct}
               onUpdate={handleUpdateProduct}
               onDelete={handleDeleteProduct}
-              onAddUser={handleAddUser}
-              onDeleteUser={handleDeleteUser}
+              onAddEmployee={handleAddEmployee}
+              onUpdateEmployee={handleUpdateEmployee}
+              onDeleteEmployee={handleDeleteEmployee}
+              onPaySalary={handlePaySalary}
               onLogout={onLogout}
               onAddCategory={handleAddCategory}
               onUpdateCategory={handleUpdateCategory}
               onDeleteCategory={handleDeleteCategory}
+              onAddEmployeeCategory={handleAddEmployeeCategory}
+              onUpdateEmployeeCategory={handleUpdateEmployeeCategory}
+              onDeleteEmployeeCategory={handleDeleteEmployeeCategory}
             />
           </div>
         ) : (
           <>
-            {/* Hero Section */}
-            <section className="mb-12 relative rounded-[2rem] overflow-hidden bg-emerald-900 text-white p-8 md:p-16">
+            <section className="mb-12 relative rounded-[2rem] overflow-hidden bg-amber-600 text-white p-8 md:p-16">
               <div className="relative z-10 max-w-xl">
-                <span className="bg-amber-500 text-amber-950 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 inline-block">
-                  Tecnologia no Campo
-                </span>
-                <h2 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight text-white">
-                  Sua produção avícola mais inteligente.
-                </h2>
-                <p className="text-emerald-100 text-lg mb-8">
-                  De chocadeiras automáticas a nutrição de precisão. Encontre tudo o que você precisa para uma criação saudável e produtiva.
-                </p>
+                <h2 className="text-4xl md:text-5xl font-black mb-4 uppercase tracking-tighter text-white">Equipamentos de Elite</h2>
+                <p className="text-amber-100 text-lg mb-8">Tecnologia de ponta para automatizar sua granja e aumentar a produtividade.</p>
                 <button 
-                  onClick={() => {
-                    const el = document.getElementById('catalog');
-                    el?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="bg-amber-500 text-amber-950 px-8 py-3 rounded-full font-bold hover:bg-amber-400 transition-all active:scale-95 shadow-xl shadow-amber-900/20"
+                  onClick={() => document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="bg-white text-amber-600 px-8 py-3 rounded-full font-bold hover:bg-amber-50 transition-all shadow-xl"
                 >
-                  Ver Catálogo
+                  Explorar Catálogo
                 </button>
               </div>
               <img 
-                src="https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?q=80&w=2070&auto=format&fit=crop" 
-                alt="Poultry Farm" 
-                className="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-overlay"
+                src="https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?q=80&w=2070" 
+                className="absolute inset-0 w-full h-full object-cover opacity-20"
               />
             </section>
 
-            {/* Filters */}
-            <div id="catalog" className="mb-8 overflow-x-auto scrollbar-hide">
-              <div className="flex gap-2 pb-2">
-                {categories.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
-                      selectedCategory === cat 
-                        ? 'bg-amber-600 text-white shadow-lg shadow-amber-100' 
-                        : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
+            <div id="catalog" className="mb-8 flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                    selectedCategory === cat 
+                      ? 'bg-amber-600 text-white shadow-lg' 
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
 
-            {/* Product Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {filteredProducts.map(product => (
                 <ProductCard 
                   key={product.id} 
@@ -287,84 +347,19 @@ const App: React.FC = () => {
                 />
               ))}
             </div>
-
-            {filteredProducts.length === 0 && (
-              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
-                <i className="fa-solid fa-seedling text-4xl text-slate-200 mb-4 block"></i>
-                <h3 className="text-lg font-semibold text-slate-600">Nenhum item encontrado</h3>
-                <p className="text-slate-400">Tente buscar por termos diferentes ou trocar a categoria.</p>
-                <button 
-                  onClick={() => {setSelectedCategory('Todos'); setSearchQuery('');}}
-                  className="mt-4 text-amber-600 font-medium"
-                >
-                  Ver todos os produtos
-                </button>
-              </div>
-            )}
           </>
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-100 py-12 mt-12">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-12">
-          <div className="col-span-1 md:col-span-1">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-8 h-8 bg-amber-600 rounded-lg flex items-center justify-center text-white">
-                <i className="fa-solid fa-egg text-sm"></i>
-              </div>
-              <h1 className="text-lg font-bold tracking-tight text-slate-900">
-                AvícolaTech<span className="text-amber-600">AI</span>
-              </h1>
-            </div>
-            <p className="text-slate-500 text-sm leading-relaxed">
-              Liderando a modernização do campo com soluções digitais e consultoria especializada para produtores rurais.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-bold text-slate-900 mb-6 uppercase text-xs tracking-widest">Setores</h4>
-            <ul className="space-y-4 text-sm text-slate-500">
-              <li><a href="#" className="hover:text-amber-600">Corte</a></li>
-              <li><a href="#" className="hover:text-amber-600">Postura</a></li>
-              <li><a href="#" className="hover:text-amber-600">Incubação</a></li>
-              <li><a href="#" className="hover:text-amber-600">Insumos</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold text-slate-900 mb-6 uppercase text-xs tracking-widest">Suporte</h4>
-            <ul className="space-y-4 text-sm text-slate-500">
-              <li><a href="#" className="hover:text-amber-600">Consultoria Técnica</a></li>
-              <li><a href="#" className="hover:text-amber-600">Pedidos</a></li>
-              <li><a href="#" className="hover:text-amber-600">Garantia</a></li>
-              <li><a href="#" className="hover:text-amber-600">Contato</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold text-slate-900 mb-6 uppercase text-xs tracking-widest">Newsletter</h4>
-            <p className="text-sm text-slate-500 mb-4">Receba dicas de manejo e promoções.</p>
-            <div className="flex gap-2">
-              <input type="email" placeholder="Seu e-mail" className="bg-slate-50 border-none rounded-xl px-4 py-2 text-sm w-full outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-amber-500" />
-              <button className="bg-amber-600 text-white px-4 py-2 rounded-xl hover:bg-amber-700 transition-colors">
-                <i className="fa-solid fa-paper-plane"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-4 mt-12 pt-8 border-t border-slate-50 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 text-xs">
-          <p>© 2024 AvícolaTech AI. Nutrimos o futuro.</p>
-          <div className="flex gap-4">
-            <span className="flex items-center gap-1"><i className="fa-solid fa-location-dot"></i> Matriz Rural, SP</span>
-          </div>
-        </div>
-      </footer>
-
-      {/* Floating Elements */}
+      <AIAssistant products={products} />
+      
       <CartDrawer 
         isOpen={isCartOpen} 
         onClose={() => setIsCartOpen(false)} 
         items={cart} 
         onUpdateQuantity={updateQuantity}
         onRemove={removeFromCart}
+        onCheckout={handleCheckout}
       />
 
       <Toast 
