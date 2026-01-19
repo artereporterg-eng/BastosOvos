@@ -1,242 +1,206 @@
 
-import React, { useState, useRef } from 'react';
-import { Product, User, Employee } from '../types';
+import React, { useState, useMemo } from 'react';
+import { Product, Employee, FinancialTransaction, CurrentAccount } from '../types';
 
 interface AdminPanelProps {
   products: Product[];
-  users: User[];
   employees: Employee[];
   categories: string[];
   employeeCategories: string[];
-  onAdd: (product: Omit<Product, 'id'>) => void;
-  onUpdate: (product: Product) => void;
-  onDelete: (id: number) => void;
-  onAddEmployee: (emp: Omit<Employee, 'id'>) => void;
-  onUpdateEmployee: (emp: Employee) => void;
+  transactions: FinancialTransaction[];
+  currentAccounts: CurrentAccount[];
+  onAddProduct: () => void;
+  onEditProduct: (p: Product) => void;
+  onDeleteProduct: (id: number) => void;
+  onAddEmployee: () => void;
+  onEditEmployee: (e: Employee) => void;
   onDeleteEmployee: (id: number) => void;
   onPaySalary: (id: number) => void;
+  onAddAccount: () => void;
+  onAddCategory: (type: 'PRODUCT' | 'EMPLOYEE', name: string) => void;
+  onRemoveCategory: (type: 'PRODUCT' | 'EMPLOYEE', name: string) => void;
   onLogout: () => void;
-  onAddCategory: (name: string) => void;
-  onUpdateCategory: (oldName: string, newName: string) => void;
-  onDeleteCategory: (name: string) => void;
-  onAddEmployeeCategory: (name: string) => void;
-  onUpdateEmployeeCategory: (oldName: string, newName: string) => void;
-  onDeleteEmployeeCategory: (name: string) => void;
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ 
-  products, 
-  users, 
-  employees,
-  categories,
-  employeeCategories,
-  onAdd, 
-  onUpdate, 
-  onDelete, 
-  onAddEmployee,
-  onUpdateEmployee,
-  onDeleteEmployee,
-  onPaySalary,
-  onLogout,
-  onAddCategory,
-  onUpdateCategory,
-  onDeleteCategory,
-  onAddEmployeeCategory,
-  onUpdateEmployeeCategory,
-  onDeleteEmployeeCategory
+  products, employees, categories, employeeCategories, transactions, currentAccounts,
+  onAddProduct, onEditProduct, onDeleteProduct,
+  onAddEmployee, onEditEmployee, onDeleteEmployee, onPaySalary,
+  onAddAccount, onAddCategory, onRemoveCategory, onLogout 
 }) => {
-  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'rh'>('products');
-  const [isEditingProduct, setIsEditingProduct] = useState<Product | null>(null);
-  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [tab, setTab] = useState<'dashboard' | 'stock' | 'rh' | 'finance' | 'accounts' | 'categories'>('dashboard');
+  const [newCatName, setNewCatName] = useState('');
+  const [catType, setCatType] = useState<'PRODUCT' | 'EMPLOYEE'>('PRODUCT');
   
-  const [isEditingEmployee, setIsEditingEmployee] = useState<Employee | null>(null);
-  const [isAddingEmployee, setIsAddingEmployee] = useState(false);
+  const formatKz = (v: number) => v.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' }).replace('AOA', 'Kz');
 
-  // Estados de preview para o formulário de RH
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [idCardPreview, setIdCardPreview] = useState<string | null>(null);
-  const [cvPreview, setCvPreview] = useState<string | null>(null);
+  const stockValuationCost = useMemo(() => products.reduce((acc, p) => acc + (p.costPrice * p.stock), 0), [products]);
+  const totalRevenue = useMemo(() => transactions.filter(t => t.type === 'ENTRADA').reduce((acc, t) => acc + t.amount, 0), [transactions]);
+  const totalExpenses = useMemo(() => transactions.filter(t => t.type === 'SAIDA').reduce((acc, t) => acc + t.amount, 0), [transactions]);
 
-  // Refs para inputs escondidos
-  const photoInputRef = useRef<HTMLInputElement>(null);
-  const idInputRef = useRef<HTMLInputElement>(null);
-  const cvInputRef = useRef<HTMLInputElement>(null);
+  // Cálculos para o Relatório Financeiro (Lucro Bruto)
+  const salesTransactions = useMemo(() => transactions.filter(t => t.category === 'Vendas'), [transactions]);
+  const totalSalesRevenue = useMemo(() => salesTransactions.reduce((acc, t) => acc + t.amount, 0), [salesTransactions]);
+  const totalSalesCost = useMemo(() => salesTransactions.reduce((acc, t) => acc + (t.cost || 0), 0), [salesTransactions]);
+  const grossProfitFromSales = totalSalesRevenue - totalSalesCost;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'idCard' | 'cv') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      if (type === 'photo') setPhotoPreview(base64);
-      if (type === 'idCard') setIdCardPreview(base64);
-      if (type === 'cv') setCvPreview(base64);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const [isEditingCategory, setIsEditingCategory] = useState<string | null>(null);
-  const [newCategoryName, setNewCategoryName] = useState('');
-
-  const [isEditingEmpCategory, setIsEditingEmpCategory] = useState<string | null>(null);
-  const [newEmpCategoryName, setNewEmpCategoryName] = useState('');
-
-  const [productForm, setProductForm] = useState<Partial<Product>>({
-    name: '', description: '', price: 0, category: categories[0] || 'Geral', image: '', stock: 10
-  });
-
-  const [employeeForm, setEmployeeForm] = useState<Partial<Employee>>({
-    name: '', role: '', category: employeeCategories[0] || 'Produção', salary: 0, admissionDate: '', contact: ''
-  });
-
-  const handleProductSubmit = (e: React.FormEvent) => {
+  const handleAddCatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isEditingProduct) {
-      onUpdate({ ...isEditingProduct, ...productForm } as Product);
-      setIsEditingProduct(null);
-    } else {
-      onAdd(productForm as Omit<Product, 'id'>);
-      setIsAddingProduct(false);
-    }
-  };
-
-  const handleEmployeeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const finalData = {
-        ...employeeForm,
-        photo: photoPreview || undefined,
-        idCardDoc: idCardPreview || undefined,
-        cvDoc: cvPreview || undefined
-    };
-    if (isEditingEmployee) {
-      onUpdateEmployee({ ...isEditingEmployee, ...finalData } as Employee);
-      setIsEditingEmployee(null);
-    } else {
-      onAddEmployee(finalData as Omit<Employee, 'id'>);
-      setIsAddingEmployee(false);
-    }
-    setEmployeeForm({ name: '', role: '', category: employeeCategories[0] || 'Produção', salary: 0, admissionDate: '', contact: '' });
-    setPhotoPreview(null);
-    setIdCardPreview(null);
-    setCvPreview(null);
-  };
-
-  const resetEmployeeForm = () => {
-    setIsAddingEmployee(false);
-    setIsEditingEmployee(null);
-    setPhotoPreview(null);
-    setIdCardPreview(null);
-    setCvPreview(null);
-  };
-
-  const handleCategorySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCategoryName.trim()) return;
-    if (isEditingCategory) {
-      onUpdateCategory(isEditingCategory, newCategoryName.trim());
-      setIsEditingCategory(null);
-    } else {
-      onAddCategory(newCategoryName.trim());
-    }
-    setNewCategoryName('');
-  };
-
-  const handleEmpCategorySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newEmpCategoryName.trim()) return;
-    if (isEditingEmpCategory) {
-      onUpdateEmployeeCategory(isEditingEmpCategory, newEmpCategoryName.trim());
-      setIsEditingEmpCategory(null);
-    } else {
-      onAddEmployeeCategory(newEmpCategoryName.trim());
-    }
-    setNewEmpCategoryName('');
+    if (!newCatName.trim()) return;
+    onAddCategory(catType, newCatName.trim());
+    setNewCatName('');
   };
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-      {/* Admin Tabs */}
-      <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
-        <div className="flex gap-6">
-          {[
-            { id: 'products', icon: 'fa-boxes-stacked', label: 'Estoque' },
-            { id: 'categories', icon: 'fa-tags', label: 'Categorias' },
-            { id: 'rh', icon: 'fa-users-gear', label: 'RH' }
-          ].map(tab => (
-            <button 
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`text-sm font-bold pb-3 border-b-2 transition-all ${activeTab === tab.id ? 'text-amber-600 border-amber-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
-            >
-              <i className={`fa-solid ${tab.icon} mr-2`}></i>{tab.label}
-            </button>
-          ))}
+    <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden min-h-[700px] flex flex-col md:flex-row animate-fade-in">
+      {/* Sidebar */}
+      <aside className="w-full md:w-72 bg-slate-50 border-r border-slate-100 p-6 flex flex-col gap-2 no-print">
+        <div className="mb-8 px-4">
+          <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">Menu de Gestão</h2>
         </div>
-        <button onClick={onLogout} className="text-red-500 text-sm font-bold hover:bg-red-50 px-3 py-1 rounded-lg">
-          <i className="fa-solid fa-right-from-bracket mr-2"></i>Sair
+        
+        <button onClick={() => setTab('dashboard')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'dashboard' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
+          <i className="fa-solid fa-gauge-high"></i> Painel de Controle
         </button>
-      </div>
 
-      <div className="p-6">
-        {activeTab === 'products' && (
-          <div className="space-y-6">
+        <button onClick={() => setTab('stock')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'stock' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
+          <i className="fa-solid fa-boxes-stacked"></i> Inventário & Estoque
+        </button>
+
+        <button onClick={() => setTab('rh')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'rh' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
+          <i className="fa-solid fa-users-gear"></i> Recursos Humanos
+        </button>
+
+        <button onClick={() => setTab('finance')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'finance' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
+          <i className="fa-solid fa-wallet"></i> Fluxo Financeiro
+        </button>
+
+        <button onClick={() => setTab('accounts')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'accounts' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
+          <i className="fa-solid fa-scale-balanced"></i> Contas Correntes
+        </button>
+
+        <button onClick={() => setTab('categories')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'categories' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
+          <i className="fa-solid fa-tags"></i> Gerir Categorias
+        </button>
+
+        <div className="mt-auto pt-6 border-t border-slate-200">
+          <button onClick={onLogout} className="w-full flex items-center gap-3 p-4 rounded-2xl font-bold text-sm text-red-400 hover:bg-red-50">
+            <i className="fa-solid fa-right-from-bracket"></i> Encerrar Sessão
+          </button>
+        </div>
+      </aside>
+
+      {/* Content Area */}
+      <section className="flex-1 p-8 md:p-12 overflow-y-auto max-h-[90vh]">
+        {tab === 'dashboard' && (
+          <div className="space-y-8">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold text-slate-800 uppercase tracking-tighter">Gestão de Estoque</h2>
-              <button 
-                onClick={() => { setIsAddingProduct(true); setIsEditingProduct(null); setProductForm({ name: '', description: '', price: 0, category: categories[0] || 'Geral', image: '', stock: 10 }); }}
-                className="bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-amber-100"
-              >
-                <i className="fa-solid fa-plus mr-2"></i>Novo Produto
-              </button>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Visão Geral do Negócio</h2>
+              <div className="bg-amber-50 text-amber-700 px-4 py-2 rounded-xl text-xs font-bold border border-amber-100 uppercase tracking-widest">Quinta dos Ovos • Angola</div>
             </div>
 
-            {(isAddingProduct || isEditingProduct) && (
-              <form onSubmit={handleProductSubmit} className="p-6 bg-amber-50 rounded-2xl border border-amber-100 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
-                <input type="text" placeholder="Nome" className="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} required />
-                <input type="number" step="0.01" placeholder="Preço" className="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500" value={productForm.price} onChange={e => setProductForm({...productForm, price: parseFloat(e.target.value)})} required />
-                <select className="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500" value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})}>
-                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <input type="number" placeholder="Estoque" className="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500" value={productForm.stock} onChange={e => setProductForm({...productForm, stock: parseInt(e.target.value)})} required />
-                <input type="text" placeholder="URL da Imagem" className="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500" value={productForm.image} onChange={e => setProductForm({...productForm, image: e.target.value})} required />
-                <input type="text" placeholder="Descrição" className="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500 lg:col-span-2" value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} required />
-                <div className="lg:col-span-3 flex justify-end gap-2">
-                  <button type="button" onClick={() => { setIsAddingProduct(false); setIsEditingProduct(null); }} className="px-4 py-2 text-slate-500">Cancelar</button>
-                  <button type="submit" className="bg-amber-600 text-white px-6 py-2 rounded-xl font-bold shadow-lg">{isEditingProduct ? 'Atualizar' : 'Cadastrar'}</button>
-                </div>
-              </form>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="p-6 bg-emerald-50 rounded-[2rem] border border-emerald-100 flex flex-col justify-between">
+                <span className="text-[10px] font-black uppercase text-emerald-600 tracking-widest mb-4">Faturamento Bruto</span>
+                <div className="text-2xl font-black text-emerald-700">{formatKz(totalRevenue)}</div>
+              </div>
+              <div className="p-6 bg-red-50 rounded-[2rem] border border-red-100 flex flex-col justify-between">
+                <span className="text-[10px] font-black uppercase text-red-600 tracking-widest mb-4">Saídas Totais</span>
+                <div className="text-2xl font-black text-red-700">{formatKz(totalExpenses)}</div>
+              </div>
+              <div className="p-6 bg-slate-900 rounded-[2rem] text-white flex flex-col justify-between shadow-xl shadow-slate-200">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Saldo Líquido</span>
+                <div className="text-2xl font-black text-white">{formatKz(totalRevenue - totalExpenses)}</div>
+              </div>
+              <div className="p-6 bg-amber-50 rounded-[2rem] border border-amber-100 flex flex-col justify-between">
+                <span className="text-[10px] font-black uppercase text-amber-600 tracking-widest mb-4">Patrimônio (Custo)</span>
+                <div className="text-2xl font-black text-amber-700">{formatKz(stockValuationCost)}</div>
+              </div>
+            </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="text-[10px] uppercase text-slate-400 font-black tracking-widest border-b">
-                  <tr>
-                    <th className="p-4">Produto</th>
-                    <th className="p-4">Preço</th>
-                    <th className="p-4">Estoque</th>
-                    <th className="p-4 text-right">Ações</th>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                <h3 className="font-black text-slate-800 uppercase tracking-tighter mb-6">Últimas Transações</h3>
+                <div className="space-y-4">
+                  {transactions.slice(0, 5).reverse().map(t => (
+                    <div key={t.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors">
+                      <div>
+                        <div className="text-sm font-bold text-slate-800">{t.description}</div>
+                        <div className="text-[10px] font-black uppercase text-slate-400">{t.date}</div>
+                      </div>
+                      <div className={`font-black ${t.type === 'ENTRADA' ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {t.type === 'ENTRADA' ? '+' : '-'}{formatKz(t.amount)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                <h3 className="font-black text-slate-800 uppercase tracking-tighter mb-6">Estado do Estoque</h3>
+                <div className="space-y-4">
+                  {products.slice(0, 5).sort((a,b) => a.stock - b.stock).map(p => (
+                    <div key={p.id} className="flex justify-between items-center">
+                      <div className="text-sm font-bold text-slate-700">{p.name}</div>
+                      <div className={`px-3 py-1 rounded-full text-[10px] font-bold ${p.stock < 5 ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'}`}>
+                        {p.stock} UNIDADES
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'stock' && (
+          <div className="space-y-8">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Gestão de Inventário</h2>
+              <button onClick={onAddProduct} className="bg-amber-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-amber-100 flex items-center gap-2 hover:bg-amber-700 active:scale-95 transition-all">
+                <i className="fa-solid fa-plus"></i> Novo Produto
+              </button>
+            </div>
+            
+            <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-widest">
+                    <th className="p-6">Produto / Categoria</th>
+                    <th className="p-6">Estoque Atual</th>
+                    <th className="p-6">P. Custo</th>
+                    <th className="p-6">P. Venda</th>
+                    <th className="p-6 text-right">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-50">
                   {products.map(p => (
-                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <img src={p.image} className="w-10 h-10 rounded-lg object-cover" />
+                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="p-6">
+                        <div className="flex items-center gap-4">
+                          <img src={p.image} className="w-12 h-12 rounded-xl object-cover shadow-sm border border-slate-100" />
                           <div>
-                            <div className="font-bold text-slate-800">{p.name}</div>
-                            <div className="text-[10px] text-slate-400 uppercase tracking-wider">{p.category}</div>
+                            <div className="font-bold text-slate-900 text-sm">{p.name}</div>
+                            <div className="text-[9px] font-black uppercase text-amber-600 tracking-wider">{p.category}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 font-bold">Kz {p.price.toFixed(2)}</td>
-                      <td className="p-4">
-                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${p.stock <= 5 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>{p.stock} UN</span>
+                      <td className="p-6">
+                        <span className={`px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase ${p.stock <= 5 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                          {p.stock} UNIDADES
+                        </span>
                       </td>
-                      <td className="p-4 text-right space-x-2">
-                        <button onClick={() => { setIsEditingProduct(p); setProductForm(p); }} className="text-amber-600 p-2"><i className="fa-solid fa-pen"></i></button>
-                        <button onClick={() => onDelete(p.id)} className="text-red-500 p-2"><i className="fa-solid fa-trash"></i></button>
+                      <td className="p-6 text-sm text-slate-500 font-medium">{formatKz(p.costPrice)}</td>
+                      <td className="p-6 text-sm text-slate-900 font-black">{formatKz(p.price)}</td>
+                      <td className="p-6 text-right">
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={() => onEditProduct(p)} className="p-3 bg-white border border-slate-100 text-slate-400 hover:text-amber-600 hover:border-amber-200 rounded-xl transition-all shadow-sm">
+                            <i className="fa-solid fa-pen-to-square"></i>
+                          </button>
+                          <button onClick={() => onDeleteProduct(p.id)} className="p-3 bg-white border border-slate-100 text-slate-400 hover:text-red-500 hover:border-red-200 rounded-xl transition-all shadow-sm">
+                            <i className="fa-solid fa-trash"></i>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -246,152 +210,240 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         )}
 
-        {activeTab === 'categories' && (
-          <div className="space-y-12">
-            <div className="space-y-6">
-              <h2 className="text-xl font-bold text-slate-800 uppercase tracking-tighter">Categorias de Produtos</h2>
-              <form onSubmit={handleCategorySubmit} className="flex gap-2">
-                <input type="text" placeholder="Nova categoria de produto..." className="flex-1 bg-slate-100 p-3 rounded-xl outline-none" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} required />
-                <button type="submit" className="bg-amber-600 text-white px-6 py-2 rounded-xl font-bold shadow-lg">{isEditingCategory ? 'Salvar' : 'Adicionar'}</button>
-              </form>
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {categories.map(cat => (
-                  <div key={cat} className="p-4 bg-white border border-slate-100 rounded-2xl flex justify-between items-center group">
-                    <span className="font-bold text-slate-700">{cat}</span>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setIsEditingCategory(cat); setNewCategoryName(cat); }} className="text-amber-600 p-2"><i className="fa-solid fa-pen"></i></button>
-                      <button onClick={() => onDeleteCategory(cat)} className="text-red-500 p-2"><i className="fa-solid fa-trash"></i></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-6 pt-10 border-t border-slate-100">
-              <h2 className="text-xl font-bold text-slate-800 uppercase tracking-tighter">Categorias de Funcionários (RH)</h2>
-              <form onSubmit={handleEmpCategorySubmit} className="flex gap-2">
-                <input type="text" placeholder="Nova categoria de funcionário..." className="flex-1 bg-slate-100 p-3 rounded-xl outline-none" value={newEmpCategoryName} onChange={e => setNewEmpCategoryName(e.target.value)} required />
-                <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold shadow-lg">{isEditingEmpCategory ? 'Salvar' : 'Adicionar'}</button>
-              </form>
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {employeeCategories.map(cat => (
-                  <div key={cat} className="p-4 bg-white border border-slate-100 rounded-2xl flex justify-between items-center group">
-                    <span className="font-bold text-slate-700">{cat}</span>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setIsEditingEmpCategory(cat); setNewEmpCategoryName(cat); }} className="text-indigo-600 p-2"><i className="fa-solid fa-pen"></i></button>
-                      <button onClick={() => onDeleteEmployeeCategory(cat)} className="text-red-500 p-2"><i className="fa-solid fa-trash"></i></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'rh' && (
-          <div className="space-y-6">
+        {tab === 'rh' && (
+          <div className="space-y-8">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold text-slate-800 uppercase tracking-tighter">Recursos Humanos</h2>
-              <button 
-                onClick={() => { setIsAddingEmployee(true); setIsEditingEmployee(null); setEmployeeForm({ name: '', role: '', category: employeeCategories[0] || 'Produção', salary: 0, admissionDate: '', contact: '' }); }}
-                className="bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg"
-              >
-                <i className="fa-solid fa-user-plus mr-2"></i>Novo Funcionário
+              <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Recursos Humanos (RH)</h2>
+              <button onClick={onAddEmployee} className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-slate-200 flex items-center gap-2 hover:bg-amber-600 active:scale-95 transition-all">
+                <i className="fa-solid fa-user-plus"></i> Novo Funcionário
               </button>
             </div>
+            
+            <div className="grid grid-cols-1 gap-4">
+              {employees.map(e => (
+                <div key={e.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col lg:flex-row justify-between items-center group hover:border-amber-200 transition-all">
+                  <div className="flex items-center gap-6 mb-4 lg:mb-0 w-full lg:w-auto">
+                    <div className="w-16 h-16 rounded-[1.5rem] bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-white shadow-inner">
+                      {e.photo ? <img src={e.photo} className="w-full h-full object-cover" /> : <i className="fa-solid fa-user text-slate-300 text-xl"></i>}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900 leading-tight">{e.name}</h3>
+                      <p className="text-amber-600 text-[10px] font-black uppercase tracking-widest">{e.role} • {e.category}</p>
+                      <div className="flex gap-2 mt-1">
+                        <div className="text-[9px] text-slate-400 font-bold uppercase">Salário: {formatKz(e.salary)}</div>
+                        <div className="flex gap-1">
+                          {e.idCardDoc && <i className="fa-solid fa-address-card text-[9px] text-indigo-400" title="BI Anexado"></i>}
+                          {e.cvDoc && <i className="fa-solid fa-file-invoice text-[9px] text-indigo-400" title="CV Anexado"></i>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-            {(isAddingEmployee || isEditingEmployee) && (
-              <form onSubmit={handleEmployeeSubmit} className="p-6 bg-slate-50 rounded-2xl border border-slate-200 animate-fade-in flex flex-col lg:flex-row gap-8">
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input type="text" placeholder="Nome Completo" className="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500" value={employeeForm.name} onChange={e => setEmployeeForm({...employeeForm, name: e.target.value})} required />
-                  <input type="text" placeholder="Cargo" className="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500" value={employeeForm.role} onChange={e => setEmployeeForm({...employeeForm, role: e.target.value})} required />
-                  <select className="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500" value={employeeForm.category} onChange={e => setEmployeeForm({...employeeForm, category: e.target.value})}>
-                    {employeeCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                  </select>
-                  <input type="number" placeholder="Salário (Kz)" className="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500" value={employeeForm.salary} onChange={e => setEmployeeForm({...employeeForm, salary: parseFloat(e.target.value)})} required />
-                  <input type="text" placeholder="Contato" className="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500" value={employeeForm.contact} onChange={e => setEmployeeForm({...employeeForm, contact: e.target.value})} required />
-                  <input type="date" className="p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500" value={employeeForm.admissionDate} onChange={e => setEmployeeForm({...employeeForm, admissionDate: e.target.value})} required />
-                </div>
-                
-                <div className="w-full lg:w-72 space-y-4 border-l border-slate-200 pl-8">
-                  <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest border-b pb-2">Documentação</h3>
+                  <div className="flex flex-col items-center lg:items-end gap-2 mb-4 lg:mb-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status:</span>
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${e.paymentStatus === 'PAGO' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                        {e.paymentStatus || 'PENDENTE'}
+                      </span>
+                    </div>
+                    {e.lastPaymentDate && (
+                      <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                        Último Pagamento: {new Date(e.lastPaymentDate).toLocaleDateString('pt-AO')}
+                      </div>
+                    )}
+                  </div>
                   
-                  <div className="space-y-3">
-                    <label className="text-[9px] font-black uppercase text-slate-400 block tracking-widest">Foto Perfil</label>
-                    <div 
-                      onClick={() => photoInputRef.current?.click()}
-                      className="w-24 h-24 mx-auto bg-white rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden cursor-pointer hover:border-amber-500 hover:bg-amber-50 transition-all group"
+                  <div className="flex items-center gap-3 w-full lg:w-auto justify-end">
+                    <button 
+                      onClick={() => onPaySalary(e.id)} 
+                      disabled={e.paymentStatus === 'PAGO'}
+                      className={`flex-1 lg:flex-none px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg ${e.paymentStatus === 'PAGO' ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-100 active:scale-95'}`}
                     >
-                      {photoPreview ? <img src={photoPreview} className="w-full h-full object-cover" /> : <i className="fa-solid fa-camera text-slate-300 group-hover:text-amber-500"></i>}
-                      <input ref={photoInputRef} type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'photo')} className="hidden" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[9px] font-black uppercase text-slate-400 block tracking-widest">Imagem do BI</label>
-                    <div 
-                      onClick={() => idInputRef.current?.click()}
-                      className="w-full aspect-video bg-white rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition-all group"
-                    >
-                      {idCardPreview ? <img src={idCardPreview} className="w-full h-full object-cover" /> : <i className="fa-solid fa-id-card text-slate-300 group-hover:text-emerald-500"></i>}
-                      <input ref={idInputRef} type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'idCard')} className="hidden" />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-4">
-                    <button type="button" onClick={resetEmployeeForm} className="px-4 py-2 text-slate-500 text-xs font-bold">Cancelar</button>
-                    <button type="submit" className="bg-slate-800 text-white px-6 py-2 rounded-xl font-bold shadow-lg text-xs">{isEditingEmployee ? 'Atualizar' : 'Efetivar'}</button>
+                      {e.paymentStatus === 'PAGO' ? 'SALÁRIO EM DIA' : 'PAGAR SALÁRIO'}
+                    </button>
+                    <button onClick={() => onEditEmployee(e)} className="p-3 bg-slate-50 text-slate-400 hover:text-amber-600 rounded-xl hover:bg-amber-50 transition-all">
+                      <i className="fa-solid fa-user-pen"></i>
+                    </button>
+                    <button onClick={() => onDeleteEmployee(e.id)} className="p-3 bg-slate-50 text-slate-400 hover:text-red-500 rounded-xl hover:bg-red-50 transition-all">
+                      <i className="fa-solid fa-user-minus"></i>
+                    </button>
                   </div>
                 </div>
-              </form>
-            )}
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="text-[10px] uppercase text-slate-400 font-black tracking-widest border-b">
-                  <tr>
-                    <th className="p-4">Funcionário</th>
-                    <th className="p-4">Cargo / Cat</th>
-                    <th className="p-4">Salário</th>
-                    <th className="p-4 text-right">Gestão</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {employees.map(emp => (
-                    <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-4 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
-                            {emp.photo ? <img src={emp.photo} className="w-full h-full object-cover" /> : <i className="fa-solid fa-user text-slate-300 w-full h-full flex items-center justify-center"></i>}
-                        </div>
-                        <div>
-                            <div className="font-bold text-slate-800">{emp.name}</div>
-                            <div className="text-[10px] text-slate-400">{emp.contact}</div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="text-sm text-slate-600">{emp.role}</div>
-                        <span className="text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 bg-slate-100 rounded">{emp.category}</span>
-                      </td>
-                      <td className="p-4 font-black text-slate-900 text-sm">{emp.salary.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' }).replace('AOA', 'Kz')}</td>
-                      <td className="p-4 text-right space-x-2">
-                        <button onClick={() => onPaySalary(emp.id)} className="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg text-[10px] font-black hover:bg-emerald-600 hover:text-white transition-all">PAGAR</button>
-                        <button onClick={() => { 
-                            setIsEditingEmployee(emp); 
-                            setEmployeeForm(emp);
-                            setPhotoPreview(emp.photo || null);
-                            setIdCardPreview(emp.idCardDoc || null);
-                            setCvPreview(emp.cvDoc || null);
-                        }} className="text-amber-600 p-2"><i className="fa-solid fa-pen"></i></button>
-                        <button onClick={() => onDeleteEmployee(emp.id)} className="text-red-500 p-2"><i className="fa-solid fa-trash"></i></button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              ))}
             </div>
           </div>
         )}
-      </div>
+
+        {tab === 'accounts' && (
+          <div className="space-y-8">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Contas Correntes</h2>
+              <button onClick={onAddAccount} className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-100 flex items-center gap-2 hover:bg-indigo-700 active:scale-95 transition-all">
+                <i className="fa-solid fa-building-columns"></i> Nova Conta
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-6">
+              {currentAccounts.map(acc => (
+                <div key={acc.id} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col sm:flex-row justify-between items-center relative overflow-hidden group">
+                  <div className={`absolute left-0 top-0 bottom-0 w-2 ${acc.type === 'CLIENTE' ? 'bg-indigo-500' : 'bg-amber-500'}`}></div>
+                  <div className="flex items-center gap-6 mb-4 sm:mb-0">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl shadow-sm ${acc.type === 'CLIENTE' ? 'bg-indigo-50 text-indigo-500' : 'bg-amber-50 text-amber-500'}`}>
+                      <i className={`fa-solid ${acc.type === 'CLIENTE' ? 'fa-user-tag' : 'fa-truck-field'}`}></i>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter">{acc.entityName}</h3>
+                      <div className="flex gap-2 mt-1">
+                        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-slate-100 rounded text-slate-500">{acc.type}</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Atividade: {acc.lastActivity}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center sm:text-right">
+                    <div className={`text-2xl font-black tracking-tighter ${acc.balance < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                      {formatKz(acc.balance)}
+                    </div>
+                    <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${acc.status === 'DEVEDOR' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                      {acc.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab === 'finance' && (
+          <div className="space-y-8 animate-fade-in">
+            <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Relatório Financeiro Detalhado</h2>
+            
+            {/* Resumo Financeiro com Lucro Bruto */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-[2rem]">
+                 <span className="text-[10px] font-black uppercase text-indigo-400 tracking-widest mb-1 block">Receita de Vendas</span>
+                 <div className="text-2xl font-black text-indigo-700">{formatKz(totalSalesRevenue)}</div>
+               </div>
+               <div className="bg-slate-50 border border-slate-200 p-6 rounded-[2rem]">
+                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1 block">Custo de Mercadoria</span>
+                 <div className="text-2xl font-black text-slate-600">{formatKz(totalSalesCost)}</div>
+               </div>
+               <div className="bg-emerald-600 p-6 rounded-[2rem] text-white shadow-xl shadow-emerald-100">
+                 <span className="text-[10px] font-black uppercase text-emerald-200 tracking-widest mb-1 block">Lucro Bruto (Vendas)</span>
+                 <div className="text-2xl font-black">{formatKz(grossProfitFromSales)}</div>
+                 <div className="text-[10px] font-bold mt-2 opacity-80">Margem: {totalSalesRevenue > 0 ? ((grossProfitFromSales / totalSalesRevenue) * 100).toFixed(1) : 0}%</div>
+               </div>
+            </div>
+
+            <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs">Histórico Completo</h3>
+                <button onClick={() => window.print()} className="text-[10px] font-black text-amber-600 uppercase border border-amber-100 px-3 py-1 rounded-lg hover:bg-amber-50">
+                  <i className="fa-solid fa-print mr-1"></i> Imprimir Extrato
+                </button>
+              </div>
+              <div className="space-y-2">
+                {transactions.slice().reverse().map(t => (
+                  <div key={t.id} className="flex justify-between items-center p-4 hover:bg-slate-50 rounded-2xl transition-all border-b border-slate-50 last:border-0">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm ${t.type === 'ENTRADA' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                        <i className={`fa-solid ${t.type === 'ENTRADA' ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}`}></i>
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-slate-800">{t.description}</div>
+                        <div className="text-[10px] font-black uppercase text-slate-400">{t.date} • <span className="text-slate-900">{t.category}</span></div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`font-black text-lg tracking-tighter ${t.type === 'ENTRADA' ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {t.type === 'ENTRADA' ? '+' : '-'}{formatKz(t.amount)}
+                      </div>
+                      {t.cost && t.category === 'Vendas' && (
+                        <div className="text-[9px] font-bold text-slate-400 uppercase">Custo: {formatKz(t.cost)}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'categories' && (
+          <div className="space-y-8 animate-fade-in">
+            <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Gestão de Categorias</h2>
+            
+            <form onSubmit={handleAddCatSubmit} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-end">
+              <div className="flex-1 space-y-1">
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Tipo de Categoria</label>
+                <select 
+                  value={catType} 
+                  onChange={(e) => setCatType(e.target.value as 'PRODUCT' | 'EMPLOYEE')}
+                  className="w-full bg-slate-50 p-4 rounded-2xl outline-none"
+                >
+                  <option value="PRODUCT">Produtos</option>
+                  <option value="EMPLOYEE">Funcionários</option>
+                </select>
+              </div>
+              <div className="flex-[2] space-y-1">
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Nome da Categoria</label>
+                <input 
+                  type="text" 
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="Ex: Frangos de Corte"
+                  className="w-full bg-slate-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+              <button type="submit" className="bg-amber-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg hover:bg-amber-700 active:scale-95 transition-all">
+                Adicionar
+              </button>
+            </form>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Product Categories */}
+              <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                <h3 className="font-black text-slate-800 uppercase tracking-tighter mb-6 flex items-center gap-2">
+                  <i className="fa-solid fa-boxes-stacked text-amber-500"></i> Categorias de Produtos
+                </h3>
+                <div className="space-y-2">
+                  {categories.map(cat => (
+                    <div key={cat} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl group hover:bg-amber-50 transition-all">
+                      <span className="text-sm font-bold text-slate-700">{cat}</span>
+                      <button 
+                        onClick={() => onRemoveCategory('PRODUCT', cat)}
+                        className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all"
+                      >
+                        <i className="fa-solid fa-circle-xmark"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Employee Categories */}
+              <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                <h3 className="font-black text-slate-800 uppercase tracking-tighter mb-6 flex items-center gap-2">
+                  <i className="fa-solid fa-users text-slate-800"></i> Categorias de Funcionários
+                </h3>
+                <div className="space-y-2">
+                  {employeeCategories.map(cat => (
+                    <div key={cat} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl group hover:bg-slate-100 transition-all">
+                      <span className="text-sm font-bold text-slate-700">{cat}</span>
+                      <button 
+                        onClick={() => onRemoveCategory('EMPLOYEE', cat)}
+                        className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all"
+                      >
+                        <i className="fa-solid fa-circle-xmark"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 };

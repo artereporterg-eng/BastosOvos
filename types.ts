@@ -8,6 +8,7 @@ export interface Product {
   image: string;
   rating: number;
   stock: number;
+  costPrice: number; // Adicionado para cálculo de lucro
 }
 
 export interface CartItem extends Product {
@@ -35,7 +36,36 @@ export interface Employee {
   admissionDate: string;
   contact: string;
   lastPaymentDate?: string;
+  paymentStatus?: 'PAGO' | 'PENDENTE';
   photo?: string;
   idCardDoc?: string;
   cvDoc?: string;
+}
+
+export interface Invoice {
+  id: number;
+  date: string;
+  items: CartItem[];
+  total: number;
+}
+
+export type TransactionType = 'ENTRADA' | 'SAIDA';
+
+export interface FinancialTransaction {
+  id: number;
+  date: string;
+  description: string;
+  amount: number;
+  type: TransactionType;
+  category: string;
+  cost?: number; // Custo total associado à transação (ex: Custo das Mercadorias Vendidas)
+}
+
+export interface CurrentAccount {
+  id: number;
+  entityName: string; // Nome do Cliente ou Fornecedor
+  type: 'CLIENTE' | 'FORNECEDOR';
+  balance: number;
+  status: 'LIMPO' | 'DEVEDOR' | 'CREDOR';
+  lastActivity: string;
 }

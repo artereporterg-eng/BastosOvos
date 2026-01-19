@@ -10,7 +10,7 @@ interface AIAssistantProps {
 const AIAssistant: React.FC<AIAssistantProps> = ({ products }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'model', content: 'Olá! Sou seu assistente EcoStore AI. Precisa de ajuda para escolher o produto ideal para você?' }
+    { role: 'model', content: 'Olá! Sou o assistente da Quinta dos Ovos. Como posso ajudar na sua produção avícola hoje?' }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -56,7 +56,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ products }) => {
               </div>
               <div>
                 <h3 className="font-bold leading-none">Assistente Inteligente</h3>
-                <span className="text-xs text-indigo-100 opacity-80">EcoStore AI Engine</span>
+                <span className="text-xs text-indigo-100 opacity-80">Quinta dos Ovos AI Engine</span>
               </div>
             </div>
           </div>
@@ -97,7 +97,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ products }) => {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Ex: 'Quero um fone para academia'"
+                placeholder="Ex: 'Qual a melhor ração para postura?'"
                 className="flex-1 bg-slate-100 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
               />
               <button 

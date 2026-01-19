@@ -10,7 +10,9 @@ export const products: Product[] = [
     category: "Incubação",
     image: "https://images.unsplash.com/photo-1594488358434-738980327f1c?q=80&w=400&h=400&fit=crop",
     rating: 4.9,
-    stock: 10
+    stock: 10,
+    // Fix: Added costPrice to satisfy Product interface requirement
+    costPrice: 595000.00
   },
   {
     id: 2,
@@ -20,7 +22,9 @@ export const products: Product[] = [
     category: "Rações",
     image: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?q=80&w=400&h=400&fit=crop",
     rating: 4.8,
-    stock: 25
+    stock: 25,
+    // Fix: Added costPrice to satisfy Product interface requirement
+    costPrice: 80500.00
   },
   {
     id: 3,
@@ -30,7 +34,9 @@ export const products: Product[] = [
     category: "Equipamentos",
     image: "https://images.unsplash.com/photo-1589923188900-85dae523342b?q=80&w=400&h=400&fit=crop",
     rating: 4.7,
-    stock: 15
+    stock: 15,
+    // Fix: Added costPrice to satisfy Product interface requirement
+    costPrice: 62300.00
   },
   {
     id: 4,
@@ -40,7 +46,9 @@ export const products: Product[] = [
     category: "Saúde",
     image: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?q=80&w=400&h=400&fit=crop",
     rating: 4.6,
-    stock: 40
+    stock: 40,
+    // Fix: Added costPrice to satisfy Product interface requirement
+    costPrice: 31500.00
   },
   {
     id: 5,
@@ -50,7 +58,9 @@ export const products: Product[] = [
     category: "Equipamentos",
     image: "https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?q=80&w=400&h=400&fit=crop",
     rating: 4.5,
-    stock: 12
+    stock: 12,
+    // Fix: Added costPrice to satisfy Product interface requirement
+    costPrice: 90300.00
   },
   {
     id: 6,
@@ -60,7 +70,9 @@ export const products: Product[] = [
     category: "Acessórios",
     image: "https://images.unsplash.com/photo-1520699697851-3dc68aa3a474?q=80&w=400&h=400&fit=crop",
     rating: 4.8,
-    stock: 20
+    stock: 20,
+    // Fix: Added costPrice to satisfy Product interface requirement
+    costPrice: 44800.00
   },
   {
     id: 7,
@@ -70,7 +82,9 @@ export const products: Product[] = [
     category: "Equipamentos",
     image: "https://images.unsplash.com/photo-1569254994521-ddb43af0a944?q=80&w=400&h=400&fit=crop",
     rating: 4.4,
-    stock: 5
+    stock: 5,
+    // Fix: Added costPrice to satisfy Product interface requirement
+    costPrice: 294000.00
   },
   {
     id: 8,
@@ -80,6 +94,8 @@ export const products: Product[] = [
     category: "Acessórios",
     image: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=400&h=400&fit=crop",
     rating: 4.7,
-    stock: 35
+    stock: 35,
+    // Fix: Added costPrice to satisfy Product interface requirement
+    costPrice: 26600.00
   }
 ];

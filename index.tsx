@@ -1,4 +1,14 @@
 
-// Este arquivo foi deixado vazio intencionalmente.
-// A lógica da aplicação foi movida para o index.html para cumprir o requisito de arquivo único Vanilla JS.
-export {};
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App';
+
+const container = document.getElementById('root');
+if (container) {
+  const root = createRoot(container);
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+}
