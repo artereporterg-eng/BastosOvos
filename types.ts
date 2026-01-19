@@ -15,11 +15,6 @@ export interface CartItem extends Product {
   quantity: number;
 }
 
-export interface ChatMessage {
-  role: 'user' | 'model';
-  content: string;
-}
-
 export interface User {
   id: number;
   username: string;
@@ -68,4 +63,10 @@ export interface CurrentAccount {
   balance: number;
   status: 'LIMPO' | 'DEVEDOR' | 'CREDOR';
   lastActivity: string;
+}
+
+// Added ChatMessage interface to fix import error in AIAssistant.tsx
+export interface ChatMessage {
+  role: 'user' | 'model';
+  content: string;
 }

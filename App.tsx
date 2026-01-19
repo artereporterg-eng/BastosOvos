@@ -6,7 +6,6 @@ import AdminPanel from './components/AdminPanel';
 import Toast from './components/Toast';
 import LoginModal from './components/LoginModal';
 import InvoiceModal from './components/InvoiceModal';
-import AIAssistant from './components/AIAssistant';
 import { products as initialProducts } from './data/products';
 import { Product, CartItem, User, Employee, Invoice, FinancialTransaction, CurrentAccount } from './types';
 
@@ -233,7 +232,6 @@ const App: React.FC = () => {
 
   const handleCheckout = () => {
     const total = cart.reduce((acc, it) => acc + it.price * it.quantity, 0);
-    // Calcular o custo total dos itens vendidos para registrar no lucro bruto
     const totalCost = cart.reduce((acc, it) => acc + it.costPrice * it.quantity, 0);
 
     const invoice: Invoice = {
@@ -250,7 +248,7 @@ const App: React.FC = () => {
       amount: total,
       type: 'ENTRADA',
       category: 'Vendas',
-      cost: totalCost // Registrando o custo da mercadoria vendida
+      cost: totalCost
     }]);
 
     setProducts(prev => prev.map(p => {
@@ -453,7 +451,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <AIAssistant products={products} />
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} items={cart} onUpdateQuantity={(id, d) => setCart(cart.map(it => it.id === id ? {...it, quantity: Math.max(1, it.quantity + d)} : it))} onRemove={(id) => setCart(cart.filter(it => it.id !== id))} onCheckout={handleCheckout} />
       <Toast message={toastMessage} isVisible={isToastVisible} onClose={() => setIsToastVisible(false)} />
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={() => { setIsLoggedIn(true); setIsLoginModalOpen(false); setView('admin'); }} />
