@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Product, Employee, User, FinancialTransaction, CurrentAccount } from '../types';
 
 interface AdminPanelProps {
+  currentUser: User;
   products: Product[];
   employees: Employee[];
   users: User[];
@@ -27,7 +28,7 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ 
-  products, employees, users, categories, employeeCategories, transactions, currentAccounts,
+  currentUser, products, employees, users, categories, employeeCategories, transactions, currentAccounts,
   onAddProduct, onEditProduct, onDeleteProduct,
   onAddEmployee, onEditEmployee, onDeleteEmployee, onPaySalary,
   onAddUser, onEditUser, onDeleteUser,
@@ -38,6 +39,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const [catType, setCatType] = useState<'PRODUCT' | 'EMPLOYEE'>('PRODUCT');
   
   const formatKz = (v: number) => v.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' }).replace('AOA', 'Kz');
+
+  const isAdmin = currentUser.role === 'admin';
 
   const stockValuationCost = useMemo(() => products.reduce((acc, p) => acc + (p.costPrice * p.stock), 0), [products]);
   const totalRevenue = useMemo(() => transactions.filter(t => t.type === 'ENTRADA').reduce((acc, t) => acc + t.amount, 0), [transactions]);
@@ -60,8 +63,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden min-h-[700px] flex flex-col md:flex-row animate-fade-in">
       {/* Sidebar */}
       <aside className="w-full md:w-72 bg-slate-50 border-r border-slate-100 p-6 flex flex-col gap-2 no-print">
-        <div className="mb-8 px-4">
-          <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">Menu de Gestão</h2>
+        <div className="mb-4 px-4">
+          <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">Acesso: {currentUser.role === 'admin' ? 'Admin' : 'Funcionário'}</h2>
+          <p className="text-sm font-bold text-slate-800 truncate">{currentUser.displayName}</p>
+        </div>
+        
+        <div className="mb-4 px-4 border-t pt-4">
+          <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Menu de Gestão</h2>
         </div>
         
         <button onClick={() => setTab('dashboard')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'dashboard' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
@@ -72,25 +80,34 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           <i className="fa-solid fa-boxes-stacked"></i> Inventário & Estoque
         </button>
 
-        <button onClick={() => setTab('rh')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'rh' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
-          <i className="fa-solid fa-users-gear"></i> Recursos Humanos
-        </button>
+        {/* Abas restritas ao Administrador */}
+        {isAdmin && (
+          <>
+            <button onClick={() => setTab('rh')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'rh' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
+              <i className="fa-solid fa-users-gear"></i> Recursos Humanos
+            </button>
 
-        <button onClick={() => setTab('users')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'users' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
-          <i className="fa-solid fa-user-lock"></i> Usuários do Sistema
-        </button>
+            <button onClick={() => setTab('users')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'users' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
+              <i className="fa-solid fa-user-lock"></i> Usuários do Sistema
+            </button>
+          </>
+        )}
 
         <button onClick={() => setTab('finance')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'finance' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
           <i className="fa-solid fa-wallet"></i> Fluxo Financeiro
         </button>
 
-        <button onClick={() => setTab('accounts')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'accounts' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
-          <i className="fa-solid fa-scale-balanced"></i> Contas Correntes
-        </button>
+        {isAdmin && (
+          <>
+            <button onClick={() => setTab('accounts')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'accounts' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
+              <i className="fa-solid fa-scale-balanced"></i> Contas Correntes
+            </button>
 
-        <button onClick={() => setTab('categories')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'categories' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
-          <i className="fa-solid fa-tags"></i> Gerir Categorias
-        </button>
+            <button onClick={() => setTab('categories')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'categories' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
+              <i className="fa-solid fa-tags"></i> Gerir Categorias
+            </button>
+          </>
+        )}
 
         <div className="mt-auto pt-6 border-t border-slate-200">
           <button onClick={onLogout} className="w-full flex items-center gap-3 p-4 rounded-2xl font-bold text-sm text-red-400 hover:bg-red-50">
@@ -166,9 +183,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           <div className="space-y-8">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Gestão de Inventário</h2>
-              <button onClick={onAddProduct} className="bg-amber-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-amber-100 flex items-center gap-2 hover:bg-amber-700 active:scale-95 transition-all">
-                <i className="fa-solid fa-plus"></i> Novo Produto
-              </button>
+              {isAdmin && (
+                <button onClick={onAddProduct} className="bg-amber-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-amber-100 flex items-center gap-2 hover:bg-amber-700 active:scale-95 transition-all">
+                  <i className="fa-solid fa-plus"></i> Novo Produto
+                </button>
+              )}
             </div>
             
             <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
@@ -203,12 +222,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                       <td className="p-6 text-sm text-slate-900 font-black">{formatKz(p.price)}</td>
                       <td className="p-6 text-right">
                         <div className="flex gap-2 justify-end">
-                          <button onClick={() => onEditProduct(p)} className="p-3 bg-white border border-slate-100 text-slate-400 hover:text-amber-600 hover:border-amber-200 rounded-xl transition-all shadow-sm">
-                            <i className="fa-solid fa-pen-to-square"></i>
-                          </button>
-                          <button onClick={() => onDeleteProduct(p.id)} className="p-3 bg-white border border-slate-100 text-slate-400 hover:text-red-500 hover:border-red-200 rounded-xl transition-all shadow-sm">
-                            <i className="fa-solid fa-trash"></i>
-                          </button>
+                          {isAdmin && (
+                            <>
+                              <button onClick={() => onEditProduct(p)} className="p-3 bg-white border border-slate-100 text-slate-400 hover:text-amber-600 hover:border-amber-200 rounded-xl transition-all shadow-sm">
+                                <i className="fa-solid fa-pen-to-square"></i>
+                              </button>
+                              <button onClick={() => onDeleteProduct(p.id)} className="p-3 bg-white border border-slate-100 text-slate-400 hover:text-red-500 hover:border-red-200 rounded-xl transition-all shadow-sm">
+                                <i className="fa-solid fa-trash"></i>
+                              </button>
+                            </>
+                          )}
+                          {!isAdmin && (
+                            <span className="text-[10px] text-slate-300 font-black uppercase">Apenas Visualização</span>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -219,7 +245,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         )}
 
-        {tab === 'rh' && (
+        {tab === 'rh' && isAdmin && (
           <div className="space-y-8">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Recursos Humanos (RH)</h2>
@@ -283,7 +309,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         )}
 
-        {tab === 'users' && (
+        {tab === 'users' && isAdmin && (
           <div className="space-y-8 animate-fade-in">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Usuários do Sistema</h2>
@@ -324,7 +350,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         )}
 
-        {tab === 'accounts' && (
+        {tab === 'accounts' && isAdmin && (
           <div className="space-y-8">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Contas Correntes</h2>
@@ -368,21 +394,30 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           <div className="space-y-8 animate-fade-in">
             <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Relatório Financeiro Detalhado</h2>
             
-            {/* Resumo Financeiro com Lucro Bruto */}
+            {/* Resumo Financeiro - Lucro Bruto apenas para Admins */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-[2rem]">
                  <span className="text-[10px] font-black uppercase text-indigo-400 tracking-widest mb-1 block">Receita de Vendas</span>
                  <div className="text-2xl font-black text-indigo-700">{formatKz(totalSalesRevenue)}</div>
                </div>
-               <div className="bg-slate-50 border border-slate-200 p-6 rounded-[2rem]">
-                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1 block">Custo de Mercadoria</span>
-                 <div className="text-2xl font-black text-slate-600">{formatKz(totalSalesCost)}</div>
-               </div>
-               <div className="bg-emerald-600 p-6 rounded-[2rem] text-white shadow-xl shadow-emerald-100">
-                 <span className="text-[10px] font-black uppercase text-emerald-200 tracking-widest mb-1 block">Lucro Bruto (Vendas)</span>
-                 <div className="text-2xl font-black">{formatKz(grossProfitFromSales)}</div>
-                 <div className="text-[10px] font-bold mt-2 opacity-80">Margem: {totalSalesRevenue > 0 ? ((grossProfitFromSales / totalSalesRevenue) * 100).toFixed(1) : 0}%</div>
-               </div>
+               
+               {isAdmin ? (
+                 <>
+                   <div className="bg-slate-50 border border-slate-200 p-6 rounded-[2rem]">
+                     <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1 block">Custo de Mercadoria</span>
+                     <div className="text-2xl font-black text-slate-600">{formatKz(totalSalesCost)}</div>
+                   </div>
+                   <div className="bg-emerald-600 p-6 rounded-[2rem] text-white shadow-xl shadow-emerald-100">
+                     <span className="text-[10px] font-black uppercase text-emerald-200 tracking-widest mb-1 block">Lucro Bruto (Vendas)</span>
+                     <div className="text-2xl font-black">{formatKz(grossProfitFromSales)}</div>
+                     <div className="text-[10px] font-bold mt-2 opacity-80">Margem: {totalSalesRevenue > 0 ? ((grossProfitFromSales / totalSalesRevenue) * 100).toFixed(1) : 0}%</div>
+                   </div>
+                 </>
+               ) : (
+                 <div className="md:col-span-2 bg-slate-50 border border-dashed border-slate-200 p-6 rounded-[2rem] flex items-center justify-center text-slate-400 text-xs font-bold uppercase tracking-widest">
+                   Métricas de Lucro Reservadas ao Administrador
+                 </div>
+               )}
             </div>
 
             <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
@@ -408,7 +443,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                       <div className={`font-black text-lg tracking-tighter ${t.type === 'ENTRADA' ? 'text-emerald-500' : 'text-red-500'}`}>
                         {t.type === 'ENTRADA' ? '+' : '-'}{formatKz(t.amount)}
                       </div>
-                      {t.cost && t.category === 'Vendas' && (
+                      {isAdmin && t.cost && t.category === 'Vendas' && (
                         <div className="text-[9px] font-bold text-slate-400 uppercase">Custo: {formatKz(t.cost)}</div>
                       )}
                     </div>
@@ -419,7 +454,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         )}
 
-        {tab === 'categories' && (
+        {tab === 'categories' && isAdmin && (
           <div className="space-y-8 animate-fade-in">
             <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Gestão de Categorias</h2>
             

@@ -345,8 +345,9 @@ const App: React.FC = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {view === 'admin' ? (
+        {view === 'admin' && currentUser ? (
           <AdminPanel 
+            currentUser={currentUser}
             products={products}
             employees={employees}
             users={users}
