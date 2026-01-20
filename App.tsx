@@ -23,6 +23,13 @@ const App: React.FC = () => {
     ];
   });
 
+  const [users, setUsers] = useState<User[]>(() => {
+    const saved = localStorage.getItem('quintadosovos_users');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, username: 'admin', password: '123', role: 'admin', displayName: 'Administrador Principal', createdAt: '2023-01-01' }
+    ];
+  });
+
   const [productCategories, setProductCategories] = useState<string[]>(() => {
     const saved = localStorage.getItem('quintadosovos_prod_cats');
     return saved ? JSON.parse(saved) : ['Rações', 'Equipamentos', 'Incubação', 'Saúde', 'Acessórios'];
@@ -52,6 +59,7 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [view, setView] = useState<'store' | 'admin'>('store');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [isToastVisible, setIsToastVisible] = useState(false);
@@ -63,16 +71,19 @@ const App: React.FC = () => {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('quintadosovos_products', JSON.stringify(products));
     localStorage.setItem('quintadosovos_employees', JSON.stringify(employees));
+    localStorage.setItem('quintadosovos_users', JSON.stringify(users));
     localStorage.setItem('quintadosovos_transactions', JSON.stringify(transactions));
     localStorage.setItem('quintadosovos_accounts', JSON.stringify(currentAccounts));
     localStorage.setItem('quintadosovos_prod_cats', JSON.stringify(productCategories));
     localStorage.setItem('quintadosovos_emp_cats', JSON.stringify(empCategories));
-  }, [products, employees, transactions, currentAccounts, productCategories, empCategories]);
+  }, [products, employees, users, transactions, currentAccounts, productCategories, empCategories]);
 
   const allCategories = useMemo(() => ['Todos', ...productCategories], [productCategories]);
 
@@ -173,6 +184,31 @@ const App: React.FC = () => {
     setEditingEmployee(null);
   };
 
+  const handleSaveUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    const userData: User = {
+      id: editingUser?.id || Date.now(),
+      username: formData.get('username') as string,
+      password: formData.get('password') as string || editingUser?.password || '123',
+      displayName: formData.get('displayName') as string,
+      role: formData.get('role') as 'admin' | 'staff',
+      createdAt: editingUser?.createdAt || new Date().toISOString().split('T')[0]
+    };
+
+    if (editingUser) {
+      setUsers(users.map(u => u.id === editingUser.id ? userData : u));
+      showToast("Usuário atualizado!");
+    } else {
+      setUsers([...users, userData]);
+      showToast("Usuário criado!");
+    }
+    setIsUserModalOpen(false);
+    setEditingUser(null);
+  };
+
   const handleSaveAccount = (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
@@ -264,6 +300,19 @@ const App: React.FC = () => {
     showToast("Pedido finalizado!");
   };
 
+  const handleLogin = (user: string, pass: string) => {
+    const foundUser = users.find(u => u.username === user && u.password === pass);
+    if (foundUser) {
+      setIsLoggedIn(true);
+      setCurrentUser(foundUser);
+      setIsLoginModalOpen(false);
+      setView('admin');
+      showToast(`Bem-vindo, ${foundUser.displayName}!`);
+    } else {
+      throw new Error("Credenciais Inválidas");
+    }
+  };
+
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
@@ -300,6 +349,7 @@ const App: React.FC = () => {
           <AdminPanel 
             products={products}
             employees={employees}
+            users={users}
             categories={productCategories}
             employeeCategories={empCategories}
             transactions={transactions}
@@ -319,10 +369,16 @@ const App: React.FC = () => {
                 showToast(`Salário pago para ${emp.name}`);
               }
             }}
+            onAddUser={() => { setEditingUser(null); setIsUserModalOpen(true); }}
+            onEditUser={(u) => { setEditingUser(u); setIsUserModalOpen(true); }}
+            onDeleteUser={(id) => { 
+              if(currentUser?.id === id) { showToast("Não podes apagar a ti mesmo!"); return; }
+              if(confirm('Remover usuário?')) setUsers(users.filter(u => u.id !== id)) 
+            }}
             onAddAccount={() => setIsAccountModalOpen(true)}
             onAddCategory={handleAddCategory}
             onRemoveCategory={handleRemoveCategory}
-            onLogout={() => { setIsLoggedIn(false); setView('store'); }}
+            onLogout={() => { setIsLoggedIn(false); setCurrentUser(null); setView('store'); }}
           />
         ) : (
           <div className="animate-fade-in">
@@ -339,6 +395,26 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Modal de Gestão de Usuários */}
+      {isUserModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-[2.5rem] p-8 animate-fade-in shadow-2xl">
+            <h2 className="text-xl font-black uppercase mb-6">{editingUser ? 'Editar Usuário' : 'Novo Usuário'}</h2>
+            <form onSubmit={handleSaveUser} className="space-y-4">
+              <input name="displayName" defaultValue={editingUser?.displayName} placeholder="Nome Completo" required className="w-full bg-slate-50 p-4 rounded-2xl outline-none" />
+              <input name="username" defaultValue={editingUser?.username} placeholder="Nome de Usuário" required className="w-full bg-slate-50 p-4 rounded-2xl outline-none" />
+              <input name="password" type="password" placeholder={editingUser ? "Deixe em branco para manter" : "Senha de Acesso"} required={!editingUser} className="w-full bg-slate-50 p-4 rounded-2xl outline-none" />
+              <select name="role" defaultValue={editingUser?.role || 'staff'} className="w-full bg-slate-50 p-4 rounded-2xl outline-none">
+                <option value="admin">Administrador</option>
+                <option value="staff">Funcionário</option>
+              </select>
+              <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg">Salvar Usuário</button>
+              <button type="button" onClick={() => setIsUserModalOpen(false)} className="w-full text-slate-400 text-[10px] font-black uppercase mt-2">Cancelar</button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modais de Gestão de Estoque */}
       {isProductModalOpen && (
@@ -453,7 +529,7 @@ const App: React.FC = () => {
 
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} items={cart} onUpdateQuantity={(id, d) => setCart(cart.map(it => it.id === id ? {...it, quantity: Math.max(1, it.quantity + d)} : it))} onRemove={(id) => setCart(cart.filter(it => it.id !== id))} onCheckout={handleCheckout} />
       <Toast message={toastMessage} isVisible={isToastVisible} onClose={() => setIsToastVisible(false)} />
-      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={() => { setIsLoggedIn(true); setIsLoginModalOpen(false); setView('admin'); }} />
+      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={handleLogin} />
       <InvoiceModal isOpen={isInvoiceOpen} onClose={() => setIsInvoiceOpen(false)} invoice={currentInvoice} />
     </div>
   );

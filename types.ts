@@ -8,7 +8,7 @@ export interface Product {
   image: string;
   rating: number;
   stock: number;
-  costPrice: number; // Adicionado para cálculo de lucro
+  costPrice: number;
 }
 
 export interface CartItem extends Product {
@@ -18,7 +18,9 @@ export interface CartItem extends Product {
 export interface User {
   id: number;
   username: string;
+  password?: string; // Senha para autenticação
   role: 'admin' | 'staff';
+  displayName: string;
   createdAt: string;
 }
 
@@ -53,19 +55,18 @@ export interface FinancialTransaction {
   amount: number;
   type: TransactionType;
   category: string;
-  cost?: number; // Custo total associado à transação (ex: Custo das Mercadorias Vendidas)
+  cost?: number;
 }
 
 export interface CurrentAccount {
   id: number;
-  entityName: string; // Nome do Cliente ou Fornecedor
+  entityName: string;
   type: 'CLIENTE' | 'FORNECEDOR';
   balance: number;
   status: 'LIMPO' | 'DEVEDOR' | 'CREDOR';
   lastActivity: string;
 }
 
-// Added ChatMessage interface to fix import error in AIAssistant.tsx
 export interface ChatMessage {
   role: 'user' | 'model';
   content: string;

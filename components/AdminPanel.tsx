@@ -1,10 +1,11 @@
 
 import React, { useState, useMemo } from 'react';
-import { Product, Employee, FinancialTransaction, CurrentAccount } from '../types';
+import { Product, Employee, User, FinancialTransaction, CurrentAccount } from '../types';
 
 interface AdminPanelProps {
   products: Product[];
   employees: Employee[];
+  users: User[];
   categories: string[];
   employeeCategories: string[];
   transactions: FinancialTransaction[];
@@ -16,6 +17,9 @@ interface AdminPanelProps {
   onEditEmployee: (e: Employee) => void;
   onDeleteEmployee: (id: number) => void;
   onPaySalary: (id: number) => void;
+  onAddUser: () => void;
+  onEditUser: (u: User) => void;
+  onDeleteUser: (id: number) => void;
   onAddAccount: () => void;
   onAddCategory: (type: 'PRODUCT' | 'EMPLOYEE', name: string) => void;
   onRemoveCategory: (type: 'PRODUCT' | 'EMPLOYEE', name: string) => void;
@@ -23,12 +27,13 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ 
-  products, employees, categories, employeeCategories, transactions, currentAccounts,
+  products, employees, users, categories, employeeCategories, transactions, currentAccounts,
   onAddProduct, onEditProduct, onDeleteProduct,
   onAddEmployee, onEditEmployee, onDeleteEmployee, onPaySalary,
+  onAddUser, onEditUser, onDeleteUser,
   onAddAccount, onAddCategory, onRemoveCategory, onLogout 
 }) => {
-  const [tab, setTab] = useState<'dashboard' | 'stock' | 'rh' | 'finance' | 'accounts' | 'categories'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'stock' | 'rh' | 'users' | 'finance' | 'accounts' | 'categories'>('dashboard');
   const [newCatName, setNewCatName] = useState('');
   const [catType, setCatType] = useState<'PRODUCT' | 'EMPLOYEE'>('PRODUCT');
   
@@ -69,6 +74,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
         <button onClick={() => setTab('rh')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'rh' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
           <i className="fa-solid fa-users-gear"></i> Recursos Humanos
+        </button>
+
+        <button onClick={() => setTab('users')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'users' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
+          <i className="fa-solid fa-user-lock"></i> Usuários do Sistema
         </button>
 
         <button onClick={() => setTab('finance')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold text-sm transition-all ${tab === 'finance' ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'text-slate-500 hover:bg-white hover:text-amber-600'}`}>
@@ -267,6 +276,47 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                     <button onClick={() => onDeleteEmployee(e.id)} className="p-3 bg-slate-50 text-slate-400 hover:text-red-500 rounded-xl hover:bg-red-50 transition-all">
                       <i className="fa-solid fa-user-minus"></i>
                     </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab === 'users' && (
+          <div className="space-y-8 animate-fade-in">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Usuários do Sistema</h2>
+              <button onClick={onAddUser} className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-100 flex items-center gap-2 hover:bg-indigo-700 active:scale-95 transition-all">
+                <i className="fa-solid fa-user-shield"></i> Novo Usuário
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {users.map(u => (
+                <div key={u.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col justify-between group hover:border-indigo-200 transition-all">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
+                      <i className="fa-solid fa-user-circle text-2xl"></i>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900">{u.displayName}</h3>
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">@{u.username}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mt-4">
+                    <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${u.role === 'admin' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
+                      {u.role === 'admin' ? 'Administrador' : 'Funcionário'}
+                    </span>
+                    <div className="flex gap-2">
+                      <button onClick={() => onEditUser(u)} className="p-2 text-slate-400 hover:text-amber-500 transition-colors">
+                        <i className="fa-solid fa-user-pen"></i>
+                      </button>
+                      <button onClick={() => onDeleteUser(u.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                        <i className="fa-solid fa-user-xmark"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -10,19 +10,19 @@ interface LoginModalProps {
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === '123') {
+    try {
       onLogin(username, password);
-      setError(false);
+      setErrorMessage('');
       setUsername('');
       setPassword('');
-    } else {
-      setError(true);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Erro ao entrar');
     }
   };
 
@@ -34,7 +34,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
             <i className="fa-solid fa-lock text-2xl"></i>
           </div>
           <h2 className="text-2xl font-bold">Acesso Restrito</h2>
-          <p className="text-indigo-100 text-sm mt-1">Entre com suas credenciais de administrador</p>
+          <p className="text-indigo-100 text-sm mt-1">Entre com suas credenciais de acesso</p>
         </div>
         
         <form onSubmit={handleSubmit} className="p-8 space-y-4">
@@ -46,7 +46,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                 type="text"
                 required
                 className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 pl-11 pr-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                placeholder="Ex: admin"
+                placeholder="Nome de usuário"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
               />
@@ -61,16 +61,16 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                 type="password"
                 required
                 className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 pl-11 pr-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                placeholder="••••••"
+                placeholder="Sua senha"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
               />
             </div>
           </div>
 
-          {error && (
+          {errorMessage && (
             <p className="text-red-500 text-xs font-medium bg-red-50 p-2 rounded-lg text-center animate-bounce">
-              Credenciais inválidas. Tente novamente.
+              {errorMessage}
             </p>
           )}
 
@@ -79,7 +79,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
               type="submit"
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 transition-all active:scale-[0.98]"
             >
-              Entrar no Painel
+              Entrar no Sistema
             </button>
             <button 
               type="button"
