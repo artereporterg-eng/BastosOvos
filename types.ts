@@ -18,10 +18,12 @@ export interface CartItem extends Product {
 export interface User {
   id: number;
   username: string;
-  password?: string; // Senha para autenticação
+  password?: string;
   role: 'admin' | 'staff';
+  category?: string;
   displayName: string;
   createdAt: string;
+  permissions: string[]; // Lista de slugs das abas permitidas (ex: 'dashboard', 'stock')
 }
 
 export interface Employee {
