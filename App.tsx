@@ -311,7 +311,7 @@ const App: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   {[
                     { icon: "fa-vial-circle-check", title: "Genética Selecionada", desc: "Pintinhos e ovos férteis com linhagens de alto rendimento." },
-                    { icon: "fa-truck-fast", title: "Logística Técnica", desc: "Entrega especializada garantindo a integridade dos produtos vivos." },
+                    { icon: "fa-truck-fast", title: "Entrega ao domicílio dos seus produtos", desc: "Logística ágil e segura para receber seus insumos e equipamentos diretamente na sua porta, preservando a qualidade de cada item." },
                     { icon: "fa-chalkboard-user", title: "Consultoria", desc: "Equipe técnica pronta para otimizar sua produção." }
                   ].map((s, i) => (
                     <div key={i} className="p-10 rounded-[2.5rem] bg-slate-50 border border-slate-100 hover:border-amber-200 hover:shadow-2xl transition-all group text-left">
@@ -332,7 +332,7 @@ const App: React.FC = () => {
                   <p className="text-slate-600 leading-relaxed font-medium">Localizada em Huambo, a Quinta dos Ovos une o carinho do campo com a precisão da tecnologia moderna para alimentar o país.</p>
                 </div>
                 <div className="flex-1 relative">
-                  <img src="https://images.unsplash.com/photo-1590483736622-39da8caf3501?q=80&w=800" className="w-full aspect-[4/5] rounded-[3rem] object-cover shadow-2xl rotate-2" alt="Fazenda" />
+                  <img src="https://images.unsplash.com/photo-1598965402089-897ce52e8355?q=80&w=800" className="w-full aspect-[4/5] rounded-[3rem] object-cover shadow-2xl rotate-2" alt="Granja Quinta dos Ovos" />
                 </div>
               </div>
             </section>
