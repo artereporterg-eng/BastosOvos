@@ -1,14 +1,16 @@
 
+// Define as interfaces fundamentais para o ecossistema do ERP Quinta dos Ovos
+
 export interface Product {
   id: number;
   name: string;
   description: string;
   price: number;
+  costPrice: number;
   category: string;
   image: string;
   rating: number;
   stock: number;
-  costPrice: number;
 }
 
 export interface CartItem extends Product {
@@ -19,11 +21,11 @@ export interface User {
   id: number;
   username: string;
   password?: string;
-  role: 'admin' | 'staff';
-  category?: string;
+  role: string;
+  category: string;
   displayName: string;
   createdAt: string;
-  permissions: string[]; // Lista de slugs das abas permitidas (ex: 'dashboard', 'stock')
+  permissions: string[];
 }
 
 export interface Employee {
@@ -34,8 +36,7 @@ export interface Employee {
   salary: number;
   admissionDate: string;
   contact: string;
-  lastPaymentDate?: string;
-  paymentStatus?: 'PAGO' | 'PENDENTE';
+  paymentStatus: 'PENDENTE' | 'PAGO';
   photo?: string;
   idCardDoc?: string;
   cvDoc?: string;
@@ -48,14 +49,12 @@ export interface Invoice {
   total: number;
 }
 
-export type TransactionType = 'ENTRADA' | 'SAIDA';
-
 export interface FinancialTransaction {
   id: number;
   date: string;
   description: string;
   amount: number;
-  type: TransactionType;
+  type: 'ENTRADA' | 'SAIDA';
   category: string;
   cost?: number;
 }
@@ -65,11 +64,10 @@ export interface CurrentAccount {
   entityName: string;
   type: 'CLIENTE' | 'FORNECEDOR';
   balance: number;
-  status: 'LIMPO' | 'DEVEDOR' | 'CREDOR';
+  status: 'DEVEDOR' | 'CREDOR' | 'LIMPO';
   lastActivity: string;
 }
 
-// Added ChatMessage interface to fix import error in AIAssistant.tsx
 export interface ChatMessage {
   role: 'user' | 'model';
   content: string;
