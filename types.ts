@@ -69,6 +69,7 @@ export interface CurrentAccount {
   lastActivity: string;
 }
 
+// Added ChatMessage interface to fix import error in AIAssistant.tsx
 export interface ChatMessage {
   role: 'user' | 'model';
   content: string;
